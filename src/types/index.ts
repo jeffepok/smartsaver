@@ -54,6 +54,15 @@ export interface Budget {
   lastUpdated: string;
 }
 
+// Deposit type for tracking savings goal deposits
+export interface Deposit {
+  id: string;
+  savings_goal_id: string;
+  amount: number;
+  description?: string;
+  created_at: string;
+}
+
 // Budget alert type
 export interface BudgetAlert {
   budgetId: string;

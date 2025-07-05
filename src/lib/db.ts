@@ -87,6 +87,20 @@ function initializeSchema() {
     )
   `);
 
+  // Create deposits table to track savings goal deposits
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS deposits (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      savings_goal_id TEXT NOT NULL,
+      amount REAL NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (savings_goal_id) REFERENCES savings_goals(id) ON DELETE CASCADE
+    )
+  `);
+
   console.log('Database schema initialized successfully');
 }
 

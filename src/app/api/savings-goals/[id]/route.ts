@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getUserById } from '@/lib/auth';
-import { id } from 'date-fns/locale';
+import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 
 interface SavingsGoal {
   id: number;
@@ -100,21 +101,60 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
     }
 
     // Get updated goal data
-    const { name, target_amount, current_amount, target_date } = await request.json();
+    const { name, target_amount, current_amount, target_date, is_deposit, deposit_amount, deposit_description } = await request.json();
 
-    // Update the goal
-    db.prepare(`
-      UPDATE savings_goals
-      SET name = ?, target_amount = ?, current_amount = ?, target_date = ?
-      WHERE id = ? AND user_id = ?
-    `).run(
-      name || existingGoal.name,
-      target_amount || existingGoal.target_amount,
-      current_amount !== undefined ? current_amount : existingGoal.current_amount,
-      target_date || existingGoal.target_date,
-      id,
-      userIdNum
-    );
+    // Start a database transaction to ensure data integrity
+    const transaction = db.transaction(() => {
+      // Check if this is a deposit operation
+      if (is_deposit && deposit_amount > 0) {
+        // Calculate the new current amount after the deposit
+        const newCurrentAmount = existingGoal.current_amount + deposit_amount;
+        
+        // Record the deposit in the deposits table
+        db.prepare(`
+          INSERT INTO deposits (id, user_id, savings_goal_id, amount, description, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(
+          uuidv4(),
+          userIdNum,
+          id,
+          deposit_amount,
+          deposit_description || `Deposit to ${existingGoal.name}`,
+          format(new Date(), 'yyyy-MM-dd')
+        );
+        
+        // Update the goal with the new current amount
+        db.prepare(`
+          UPDATE savings_goals
+          SET name = ?, target_amount = ?, current_amount = ?, target_date = ?
+          WHERE id = ? AND user_id = ?
+        `).run(
+          name || existingGoal.name,
+          target_amount || existingGoal.target_amount,
+          newCurrentAmount, // Use the calculated new amount after deposit
+          target_date || existingGoal.target_date,
+          id,
+          userIdNum
+        );
+      } else {
+        // Regular update without deposit
+        db.prepare(`
+          UPDATE savings_goals
+          SET name = ?, target_amount = ?, current_amount = ?, target_date = ?
+          WHERE id = ? AND user_id = ?
+        `).run(
+          name || existingGoal.name,
+          target_amount || existingGoal.target_amount,
+          current_amount !== undefined ? current_amount : existingGoal.current_amount,
+          target_date || existingGoal.target_date,
+          id,
+          userIdNum
+        );
+      }
+    });
+    
+    // Execute the transaction
+    transaction();
 
     // Get updated goal
     const updatedGoal = db.prepare(

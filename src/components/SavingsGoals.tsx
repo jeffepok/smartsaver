@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { SavingsGoal } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
-import { FaPiggyBank } from 'react-icons/fa';
+import { FaPiggyBank, FaHistory, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import DepositHistory from './DepositHistory';
 
 interface SavingsGoalsProps {
   goals: SavingsGoal[];
@@ -28,8 +29,12 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
   // Deposit functionality
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
+  const [depositDescription, setDepositDescription] = useState('');
   const [depositGoalId, setDepositGoalId] = useState<string | null>(null);
   const [depositGoalName, setDepositGoalName] = useState('');
+  
+  // Track which goals have expanded deposit history
+  const [expandedGoalIds, setExpandedGoalIds] = useState<Set<string>>(new Set());
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -76,7 +81,19 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
     setDepositGoalId(goal.id);
     setDepositGoalName(goal.name);
     setDepositAmount('');
+    setDepositDescription('');
     setShowDepositModal(true);
+  };
+  
+  // Toggle deposit history visibility
+  const toggleDepositHistory = (goalId: string) => {
+    const newExpandedGoalIds = new Set(expandedGoalIds);
+    if (newExpandedGoalIds.has(goalId)) {
+      newExpandedGoalIds.delete(goalId);
+    } else {
+      newExpandedGoalIds.add(goalId);
+    }
+    setExpandedGoalIds(newExpandedGoalIds);
   };
 
   // Handle deposit submission
@@ -89,14 +106,23 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
 
     const goal = goals.find(g => g.id === depositGoalId);
     if (!goal) return;
-
+    
+    // We're not directly updating current_amount anymore as the backend will handle it
+    // Instead we pass the deposit info to the update function
     const updatedGoal = {
       ...goal,
-      current_amount: goal.current_amount + parseFloat(depositAmount)
+      is_deposit: true,
+      deposit_amount: parseFloat(depositAmount),
+      deposit_description: depositDescription || `Deposit to ${goal.name}`
     };
 
     onUpdateGoal(updatedGoal);
     setShowDepositModal(false);
+    
+    // Expand the goal's deposit history to show the new deposit
+    const newExpandedGoalIds = new Set(expandedGoalIds);
+    newExpandedGoalIds.add(depositGoalId);
+    setExpandedGoalIds(newExpandedGoalIds);
   };
 
   // Calculate progress percentage
@@ -257,6 +283,30 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                 <div className="mt-1 text-sm text-gray-600">
                   {progress.toFixed(1)}% complete
                 </div>
+                
+                {/* Deposit history toggle */}
+                <div className="mt-3 pt-2 border-t border-gray-100">
+                  <button 
+                    onClick={() => toggleDepositHistory(goal.id)}
+                    className="text-sm flex items-center text-gray-600 hover:text-blue-600 transition-colors"
+                  >
+                    <FaHistory className="mr-1" />
+                    {expandedGoalIds.has(goal.id) ? (
+                      <>
+                        Hide deposit history <FaChevronUp className="ml-1" />
+                      </>
+                    ) : (
+                      <>
+                        Show deposit history <FaChevronDown className="ml-1" />
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Deposit history component */}
+                {expandedGoalIds.has(goal.id) && (
+                  <DepositHistory savingsGoalId={goal.id} limit={5} />
+                )}
               </div>
             );
           })}
@@ -287,6 +337,20 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                   step="0.01"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter amount"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="deposit-description" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description (optional)
+                </label>
+                <input
+                  id="deposit-description"
+                  type="text"
+                  value={depositDescription}
+                  onChange={(e) => setDepositDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="E.g., Monthly contribution"
                 />
               </div>
 
