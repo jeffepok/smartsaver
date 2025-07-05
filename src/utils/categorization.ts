@@ -1,7 +1,7 @@
 import { Transaction } from "../types";
 
 // Keywords for different spending categories
-const categoryKeywords: Record<string, string[]> = {
+export const categoryKeywords: Record<string, string[]> = {
   "Food & Dining": ["restaurant", "cafe", "dining", "eat", "food", "grocery", "supermarket", "bakery", "meal", "takeaway", "takeout"],
   "Rent & Housing": ["rent", "mortgage", "housing", "apartment", "condo", "home", "property", "real estate"],
   "Transportation": ["uber", "lyft", "taxi", "car", "bus", "train", "metro", "transport", "gas", "fuel", "parking", "transit"],

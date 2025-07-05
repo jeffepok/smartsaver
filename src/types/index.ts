@@ -1,6 +1,7 @@
 // Financial transaction data type
 export interface Transaction {
   id: string;
+  user_id?: string; // Added for database storage
   date: string;
   description: string;
   amount: number;
@@ -8,6 +9,7 @@ export interface Transaction {
   account_number?: string;
   currency?: string;
   category?: string; // Added for categorization
+  csv_file_id?: number | null; // Reference to source CSV file if applicable
 }
 
 // Spending category type

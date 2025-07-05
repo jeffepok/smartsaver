@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { categoryColors } from '@/utils/categorization';
-import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaChevronLeft, FaChevronRight, FaPlus } from 'react-icons/fa';
+import AddTransactionForm from './AddTransactionForm';
 
 interface TransactionsListProps {
   transactions: Transaction[];
+  onRefreshTransactions?: () => void;
 }
 
-const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => {
+const TransactionsList: React.FC<TransactionsListProps> = ({ transactions, onRefreshTransactions }) => {
   const [filter, setFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'description'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -19,6 +21,7 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [paginatedResults, setPaginatedResults] = useState<Transaction[]>([]);
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
   
   // Get unique categories from transactions
   const categories = [...new Set(transactions.map(t => t.category || 'Uncategorized'))];
@@ -78,9 +81,35 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => 
     }
   };
   
+  // Handle successful transaction addition
+  const handleTransactionAdded = () => {
+    setShowAddForm(false);
+    if (onRefreshTransactions) {
+      onRefreshTransactions();
+    }
+  };
+
   return (
     <div className="w-full p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-6">Transactions</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold">Transactions</h2>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+        >
+          <FaPlus className="mr-2" />
+          {showAddForm ? 'Cancel' : 'Add Transaction'}
+        </button>
+      </div>
+      
+      {showAddForm && (
+        <div className="mb-6">
+          <AddTransactionForm 
+            onTransactionAdded={handleTransactionAdded}
+            onCancel={() => setShowAddForm(false)}
+          />
+        </div>
+      )}
       
       <div className="flex flex-col md:flex-row justify-between mb-4 gap-4">
         {/* Category filter */}

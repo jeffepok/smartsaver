@@ -86,8 +86,8 @@ export default function Home() {
     fetchBudgets();
   }, []);
 
-  // Handle data loaded from CSV
-  const handleDataLoaded = async () => {
+  // Function to refresh transactions from the API
+  const refreshTransactions = async () => {
     try {
       // Fetch fresh transaction data from the API
       const response = await fetch('/api/transactions');
@@ -102,8 +102,13 @@ export default function Home() {
         setTransactions(data.transactions);
       }
     } catch (error) {
-      console.error('Error fetching transactions after CSV upload:', error);
+      console.error('Error fetching transactions:', error);
     }
+  };
+
+  // Handle data loaded from CSV
+  const handleDataLoaded = async () => {
+    await refreshTransactions();
   };
 
   // Handle adding a new savings goal
@@ -214,7 +219,7 @@ export default function Home() {
       case 'summary':
         return <Dashboard transactions={transactions} />;
       case 'transactions':
-        return <TransactionsList transactions={transactions} />;
+        return <TransactionsList transactions={transactions} onRefreshTransactions={refreshTransactions} />;
       case 'charts':
         return <Dashboard transactions={transactions} />; // Show dashboard instead since charts are integrated
       case 'goals':
