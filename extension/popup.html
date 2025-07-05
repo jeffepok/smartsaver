@@ -1,71 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartSave Transaction Alert</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>SmartSave</h1>
-      <p>Transaction Alert System</p>
-    </header>
-    
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="notification">New Alert</button>
-      <button class="tab-btn" data-tab="history">History</button>
-    </div>
-    
-    <div id="notification-tab" class="tab-content active">
-      <div class="notification-panel">
-        <h2>Test Transaction Alert</h2>
-        <form id="notification-form">
-          <div class="input-group">
-            <label for="description">Description:</label>
-            <input type="text" id="description" placeholder="e.g., Grocery Shopping" required>
-          </div>
-          
-          <div class="input-group">
-            <label for="amount">Amount:</label>
-            <input type="number" id="amount" step="0.01" placeholder="0.00" required>
-          </div>
-          
-          <div class="input-row">
-            <div class="input-group">
-              <label for="currency">Currency:</label>
-              <select id="currency">
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-              </select>
-            </div>
-            
-            <div class="input-group">
-              <label for="type">Type:</label>
-              <select id="type">
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-              </select>
-            </div>
-          </div>
-          
-          <button type="submit" id="trigger-btn">Send Notification</button>
-        </form>
-        <div id="status-message"></div>
-      </div>
-    </div>
-    
-    <div id="history-tab" class="tab-content">
-      <div class="history-panel">
-        <h2>Recent Transactions</h2>
-        <div class="transaction-list" id="transaction-list">
-          <div class="loading">Loading transactions...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
+<html>
+  <head><title>SmartSave</title></head>
+  <body>
+    <h1>💰 SmartSave</h1>
+    <p id="latest">Loading...</p>
+    <script src="popup.js"></script>
+  </body>
 </html>
