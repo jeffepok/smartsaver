@@ -66,6 +66,11 @@ function createTransactionNotification(transaction) {
 
   // Create notification
   chrome.notifications.create(`transaction-${Date.now()}`, options, (notificationId) => {
+    if (chrome.runtime.lastError) {
+      console.error("Notification creation failed:", chrome.runtime.lastError.message);
+      return;
+    }
+    
     console.log("Notification created:", notificationId);
 
     // Automatically clear notification after 10 seconds

@@ -3,6 +3,20 @@ import { format } from 'date-fns';
 import { Transaction } from '@/types';
 import { categoryKeywords } from '@/utils/categorization';
 
+// Chrome extension API type declarations
+declare global {
+  interface Window {
+    chrome?: {
+      runtime?: {
+        sendMessage: (extensionId: string, message: any, callback?: (response: any) => void) => void;
+        lastError?: {
+          message: string;
+        };
+      };
+    };
+  }
+}
+
 interface AddTransactionFormProps {
   onTransactionAdded: () => void;
   onCancel: () => void;
@@ -113,6 +127,32 @@ const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ onTransactionAd
 
       // Success! Notify parent component
       onTransactionAdded();
+
+      // Send message to Chrome extension to trigger notification
+      try {
+        if (window.chrome && window.chrome.runtime) {
+          // TODO: Replace with your actual extension ID from chrome://extensions/ (enable Developer mode)
+          const extensionId = 'hblpfpdglkfoenieammipgngcmioejbl';
+          window.chrome.runtime.sendMessage(extensionId, {
+            action: "triggerNotification",
+            transaction: {
+              description: formData.description,
+              amount: formData.type === 'expense' ? numericAmount : Math.abs(numericAmount),
+              currency: formData.currency,
+              type: formData.type,
+              date: formData.date
+            }
+          }, (response: any) => {
+            if (window.chrome?.runtime?.lastError) {
+              console.log('Failed to send notification to extension:', window.chrome.runtime.lastError);
+            } else {
+              console.log('Notification sent to extension:', response);
+            }
+          });
+        }
+      } catch (error) {
+        console.log('Extension communication error:', error);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error adding transaction');
     } finally {

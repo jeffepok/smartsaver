@@ -25,5 +25,8 @@
     "resources": ["icons/*.png"],
     "matches": ["<all_urls>"]
   }
-]
+  ],
+  "externally_connectable": {
+    "matches": ["*://localhost:*/*", "*://*.vercel.app/*"]
+  }
 }
