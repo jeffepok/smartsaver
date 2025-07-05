@@ -125,31 +125,91 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
     // Calculate category totals
     const categoryTotals = calculateCategoryTotals(recentTransactions);
     
+    // Sort categories by spending amount
+    const sortedCategories = Object.entries(categoryTotals)
+      .sort(([, a], [, b]) => b - a)
+      .filter(([, amount]) => amount < 0); // Only include expense categories
+    
+    // Get top spending categories
+    const topExpenseCategories = sortedCategories
+      .map(([category, amount]) => `${category}: €${Math.abs(amount).toFixed(2)}`)
+      .slice(0, 5);
+
+    // Monthly breakdown of expenses
+    const last3Months = Array.from({ length: 3 }, (_, i) => subMonths(today, i));
+    const monthlyExpenses = last3Months.map(month => {
+      const monthStart = startOfMonth(month);
+      const monthEnd = endOfMonth(month);
+      const monthTransactions = transactions.filter(t => {
+        const date = new Date(t.date);
+        return isWithinInterval(date, { start: monthStart, end: monthEnd }) && t.amount < 0;
+      });
+      const totalExpense = Math.abs(monthTransactions.reduce((sum, t) => sum + t.amount, 0));
+      return { 
+        month: format(month, 'MMMM'), 
+        total: totalExpense
+      };
+    });
+    
     // Format transaction data
     const transactionSummary = `Recent transactions summary (past 3 months): ${recentTransactions.length} transactions.\n` +
-      `Category totals: ${Object.entries(categoryTotals)
-        .map(([category, amount]) => `${category}: €${amount.toFixed(2)}`)
-        .join(', ')}.`;
+      `Top expense categories: ${topExpenseCategories.join(', ')}.\n` +
+      `Monthly expenses: ${monthlyExpenses.map(m => `${m.month}: €${m.total.toFixed(2)}`).join(', ')}.`;
 
-    // Format budget data
+    // Format budget data with progress
     const budgetSummary = budgets.length > 0 ?
-      `Budgets: ${budgets.map(b => `${b.category}: €${b.amount.toFixed(2)} ${b.period}`).join(', ')}.` :
+      `Budgets: ${budgets.map(b => {
+        // Calculate actual spending for this category
+        const categorySpending = Math.abs(categoryTotals[b.category] || 0);
+        const percentUsed = (categorySpending / b.amount) * 100;
+        return `${b.category}: €${categorySpending.toFixed(2)}/€${b.amount.toFixed(2)} (${percentUsed.toFixed(1)}% used) ${b.period}`;
+      }).join(', ')}.` :
       'No budgets set.';
 
-    // Format savings goals data
+    // Format savings goals data with time projections
     const goalsSummary = savingsGoals.length > 0 ?
       `Savings goals: ${savingsGoals.map(g => {
         const progress = (g.current_amount / g.target_amount) * 100;
-        return `${g.name}: €${g.current_amount.toFixed(2)}/${g.target_amount.toFixed(2)} (${progress.toFixed(1)}%)`;
-      }).join(', ')}.` :
+        
+        // Calculate monthly saving rate if there's a target date
+        let timeInfo = '';
+        if (g.target_date) {
+          const targetDate = parseISO(g.target_date);
+          const monthsLeft = Math.max(0, Math.floor((targetDate.getTime() - today.getTime()) / (30 * 24 * 60 * 60 * 1000)));
+          const amountLeft = g.target_amount - g.current_amount;
+          const monthlyNeed = monthsLeft > 0 ? amountLeft / monthsLeft : amountLeft;
+          
+          timeInfo = ` (${monthsLeft} months left, need €${monthlyNeed.toFixed(2)}/month)`;
+        }
+        
+        return `${g.name}: €${g.current_amount.toFixed(2)}/€${g.target_amount.toFixed(2)} (${progress.toFixed(1)}%)${timeInfo}`;
+      }).join('\n')}.` :
       'No savings goals set.';
 
     // Income analysis
     const incomeTransactions = transactions.filter(t => t.amount > 0);
     const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const incomeSummary = `Total recorded income: €${totalIncome.toFixed(2)}.`;
+    const averageMonthlyIncome = totalIncome / 3; // Last 3 months
     
-    return `${transactionSummary}\n${budgetSummary}\n${goalsSummary}\n${incomeSummary}`;
+    // Calculate total expenses
+    const expenseTransactions = transactions.filter(t => t.amount < 0);
+    const totalExpenses = Math.abs(expenseTransactions.reduce((sum, t) => sum + t.amount, 0));
+    const averageMonthlyExpenses = totalExpenses / 3; // Last 3 months
+    
+    // Savings rate
+    const savingsRate = ((totalIncome - totalExpenses) / totalIncome) * 100;
+    
+    const financialSummary = `Financial summary:\n` +
+      `- Total income (3 months): €${totalIncome.toFixed(2)} (avg €${averageMonthlyIncome.toFixed(2)}/month)\n` +
+      `- Total expenses (3 months): €${totalExpenses.toFixed(2)} (avg €${averageMonthlyExpenses.toFixed(2)}/month)\n` +
+      `- Savings rate: ${savingsRate.toFixed(1)}%\n` +
+      `- Current month budget utilization: ${budgets.map(b => {
+        const categorySpending = Math.abs(categoryTotals[b.category] || 0);
+        const percentUsed = (categorySpending / b.amount) * 100;
+        return `${b.category}: ${percentUsed.toFixed(0)}%`;
+      }).join(', ')}`;
+    
+    return `${financialSummary}\n\n${transactionSummary}\n\n${budgetSummary}\n\n${goalsSummary}`;
   };
 
 

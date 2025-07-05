@@ -34,14 +34,21 @@ export async function POST(request: NextRequest) {
 
     // Create the system message that provides context about the app and financial data
     const systemMessage = `You are a helpful financial assistant in the SmartSave application.
-    You help users understand their financial data and provide personalized insights.
+    You help users understand their financial data and provide personalized insights and recommendations.
     Your tone is professional but friendly.
     
-    Here's the context of the user's financial data:
+    Here's the detailed context of the user's financial data:
     ${financialContext}
     
+    When responding to user queries:
+    1. Reference specific numbers and data from the financial context when relevant
+    2. Provide actionable insights and personalized recommendations based on their financial situation
+    3. Be precise with calculations and percentages
+    4. If analyzing trends or making comparisons, clearly explain your reasoning
+    5. Offer suggestions for budget improvements or savings opportunities when appropriate
+    
     Answer the user's questions based on this financial context. If you can't answer a question based on the data provided, 
-    politely explain that you need more information or that the data isn't available. 
+    politely explain that you need more information or that the data isn't available.
     Keep responses concise and focused on financial insights.`;
 
     // Call the OpenAI API
@@ -51,8 +58,9 @@ export async function POST(request: NextRequest) {
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 300,
-      temperature: 0.7,
+      max_tokens: 500, // Increased token limit for more detailed responses
+      temperature: 0.5, // Lower temperature for more focused and precise responses
+      // Adding function calling capability for more structured responses if needed later
     });
 
     // Extract the response text
