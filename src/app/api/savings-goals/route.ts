@@ -7,14 +7,14 @@ export async function GET(request: NextRequest) {
   try {
     // Get user ID from session
     const userId = request.cookies.get('session_id')?.value;
-    
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
-    
+
     // Verify user exists
     const userIdNum = parseInt(userId, 10);
     const user = getUserById(userIdNum);
@@ -24,14 +24,14 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     // Database is already imported
-    
+
     // Get savings goals for the user
     const savingsGoals = db.prepare(
       'SELECT * FROM savings_goals WHERE user_id = ?'
     ).all(userId);
-    
+
     return NextResponse.json({ savingsGoals });
   } catch (error) {
     console.error('Error fetching savings goals:', error);
@@ -46,14 +46,14 @@ export async function POST(request: NextRequest) {
   try {
     // Get user ID from session
     const userId = request.cookies.get('session_id')?.value;
-    
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
-    
+
     // Verify user exists
     const userIdNum = parseInt(userId, 10);
     const user = getUserById(userIdNum);
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     // Get request body
-    const { name, targetAmount, currentAmount, targetDate, category } = await request.json();
-    
+    const { name, targetAmount, currentAmount, targetDate } = await request.json();
+
     // Validate required fields
     if (!name || !targetAmount) {
       return NextResponse.json(
@@ -74,15 +74,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // Database is already imported
-    
+
     // Generate ID for the goal
     const goalId = uuidv4();
-    
+
     // Insert new savings goal
     db.prepare(
-      'INSERT INTO savings_goals (id, user_id, name, target_amount, current_amount, target_date, category) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO savings_goals (id, user_id, name, target_amount, current_amount, target_date) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(
       goalId,
       userId,
@@ -90,14 +90,13 @@ export async function POST(request: NextRequest) {
       targetAmount,
       currentAmount || 0,
       targetDate || null,
-      category || null
     );
-    
+
     // Return the created goal
     const savedGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ?'
     ).get(goalId);
-    
+
     return NextResponse.json(
       { goal: savedGoal },
       { status: 201 }
