@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getUserById } from '@/lib/auth';
+import { id } from 'date-fns/locale';
 
 interface SavingsGoal {
   id: number;
@@ -17,6 +18,7 @@ interface Params {
 }
 
 export async function GET(request: NextRequest, { params }: { params: Params }) {
+  const { id } = await params;
   try {
     // Get user ID from session
     const userId = request.cookies.get('session_id')?.value;
@@ -43,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Params }) 
     // Get the specific savings goal
     const savingsGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ? AND user_id = ?'
-    ).get(params.id, userIdNum);
+    ).get(id, userIdNum);
 
     if (!savingsGoal) {
       return NextResponse.json(
@@ -87,7 +89,7 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
     // Verify goal exists and belongs to user
     const existingGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ? AND user_id = ?'
-    ).get(params.id, userIdNum) as SavingsGoal | undefined;
+    ).get(id, userIdNum) as SavingsGoal | undefined;
 
     if (!existingGoal) {
       return NextResponse.json(
@@ -110,14 +112,14 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
       currentAmount !== undefined ? currentAmount : existingGoal.current_amount,
       targetDate || existingGoal.target_date,
       category || existingGoal.category,
-      params.id,
+      id,
       userIdNum
     );
 
     // Get updated goal
     const updatedGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ?'
-    ).get(params.id) as SavingsGoal;
+    ).get(id) as SavingsGoal;
 
     return NextResponse.json({ goal: updatedGoal });
   } catch (error) {
@@ -155,7 +157,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Params 
     // Database is already imported
     const existingGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ? AND user_id = ?'
-    ).get(params.id, userId);
+    ).get(id, userId);
 
     if (!existingGoal) {
       return NextResponse.json(
@@ -167,7 +169,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Params 
     // Delete the goal
     db.prepare(
       'DELETE FROM savings_goals WHERE id = ? AND user_id = ?'
-    ).run(params.id, userIdNum);
+    ).run(id, userIdNum);
 
     return NextResponse.json(
       { success: true, message: 'Savings goal deleted successfully' },

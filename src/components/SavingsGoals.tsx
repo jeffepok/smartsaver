@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SavingsGoal } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
+import { FaPiggyBank } from 'react-icons/fa';
 
 interface SavingsGoalsProps {
   goals: SavingsGoal[];
@@ -23,6 +24,12 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
   const [targetDate, setTargetDate] = useState('');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   
+  // Deposit functionality
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositGoalId, setDepositGoalId] = useState<string | null>(null);
+  const [depositGoalName, setDepositGoalName] = useState('');
+
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +70,34 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
     setShowAddForm(true);
   };
   
+  // Open deposit modal
+  const openDepositModal = (goal: SavingsGoal) => {
+    setDepositGoalId(goal.id);
+    setDepositGoalName(goal.name);
+    setDepositAmount('');
+    setShowDepositModal(true);
+  };
+  
+  // Handle deposit submission
+  const handleDepositSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!depositGoalId || !depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
+      return;
+    }
+    
+    const goal = goals.find(g => g.id === depositGoalId);
+    if (!goal) return;
+    
+    const updatedGoal = {
+      ...goal,
+      currentAmount: goal.currentAmount + parseFloat(depositAmount)
+    };
+    
+    onUpdateGoal(updatedGoal);
+    setShowDepositModal(false);
+  };
+
   // Calculate progress percentage
   const calculateProgress = (current: number, target: number): number => {
     if (target === 0) return 0;
@@ -178,6 +213,12 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                   <h3 className="text-lg font-medium">{goal.name}</h3>
                   <div className="flex space-x-2">
                     <button
+                      onClick={() => openDepositModal(goal)}
+                      className="text-green-600 hover:text-green-800 flex items-center"
+                    >
+                      <FaPiggyBank className="mr-1" /> Deposit
+                    </button>
+                    <button
                       onClick={() => startEditing(goal)}
                       className="text-blue-600 hover:text-blue-800"
                     >
@@ -222,6 +263,49 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
       ) : (
         <div className="text-center py-8 text-gray-500">
           No savings goals set yet. Click "Add New Goal" to get started.
+        </div>
+      )}
+      
+      {/* Deposit Modal */}
+      {showDepositModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Deposit to {depositGoalName}</h3>
+            <form onSubmit={handleDepositSubmit}>
+              <div className="mb-4">
+                <label htmlFor="deposit-amount" className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount to Deposit (€)
+                </label>
+                <input
+                  id="deposit-amount"
+                  type="number"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  required
+                  min="0.01"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter amount"
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDepositModal(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                >
+                  Deposit
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
