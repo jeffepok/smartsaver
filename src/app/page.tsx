@@ -50,8 +50,48 @@ export default function Home() {
         console.error('Error fetching transactions:', error);
       }
     };
+
+    // Fetch savings goals from the API
+    const fetchSavingsGoals = async () => {
+      try {
+        const response = await fetch('/api/savings-goals');
+        
+        if (!response.ok) {
+          if (response.status === 401) return;
+          throw new Error('Failed to fetch savings goals');
+        }
+        
+        const data = await response.json();
+        if (data.goals) {
+          setSavingsGoals(data.goals);
+        }
+      } catch (error) {
+        console.error('Error fetching savings goals:', error);
+      }
+    };
+
+    // Fetch budgets from the API
+    const fetchBudgets = async () => {
+      try {
+        const response = await fetch('/api/budgets');
+        
+        if (!response.ok) {
+          if (response.status === 401) return;
+          throw new Error('Failed to fetch budgets');
+        }
+        
+        const data = await response.json();
+        if (data.budgets) {
+          setBudgets(data.budgets);
+        }
+      } catch (error) {
+        console.error('Error fetching budgets:', error);
+      }
+    };
     
     fetchTransactions();
+    fetchSavingsGoals();
+    fetchBudgets();
   }, []);
   
   // Handle data loaded from CSV
@@ -119,6 +159,72 @@ export default function Home() {
       console.error('Error deleting savings goal:', error);
     }
   };
+
+  // Handle adding a budget
+  const handleAddBudget = async (budget: Budget) => {
+    try {
+      const response = await fetch('/api/budgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(budget)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add budget');
+      }
+      
+      const data = await response.json();
+      const savedBudget = data.budget;
+      const updatedBudgets = [...budgets, savedBudget];
+      setBudgets(updatedBudgets);
+      return savedBudget;
+    } catch (error) {
+      console.error('Error adding budget:', error);
+      return null;
+    }
+  };
+
+  // Handle updating a budget
+  const handleUpdateBudget = async (updatedBudget: Budget) => {
+    try {
+      const response = await fetch(`/api/budgets/${updatedBudget.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedBudget)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update budget');
+      }
+      
+      const updatedBudgets = budgets.map((budget) => 
+        budget.id === updatedBudget.id ? updatedBudget : budget
+      );
+      setBudgets(updatedBudgets);
+      return updatedBudget;
+    } catch (error) {
+      console.error('Error updating budget:', error);
+      return null;
+    }
+  };
+
+  // Handle deleting a budget
+  const handleDeleteBudget = async (budgetId: string) => {
+    try {
+      const response = await fetch(`/api/budgets/${budgetId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete budget');
+      }
+      
+      const updatedBudgets = budgets.filter((budget) => budget.id !== budgetId);
+      setBudgets(updatedBudgets);
+    } catch (error) {
+      console.error('Error deleting budget:', error);
+    }
+  };
   
   // Render tab content based on active tab
   const renderTabContent = () => {
@@ -147,7 +253,9 @@ export default function Home() {
           <BudgetManager 
             transactions={transactions}
             budgets={budgets}
-            onBudgetChange={setBudgets}
+            onAddBudget={handleAddBudget}
+            onUpdateBudget={handleUpdateBudget}
+            onDeleteBudget={handleDeleteBudget}
           />
         );
       case 'recommendations':

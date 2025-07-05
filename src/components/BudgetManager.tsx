@@ -7,10 +7,12 @@ import { checkBudgetsAndGenerateAlerts } from '@/utils/budgetUtils';
 interface BudgetManagerProps {
   transactions: Transaction[];
   budgets: Budget[];
-  onBudgetChange: (budgets: Budget[]) => void;
+  onAddBudget: (budget: Budget) => Promise<Budget | null>;
+  onUpdateBudget: (budget: Budget) => Promise<Budget | null>;
+  onDeleteBudget: (budgetId: string) => Promise<void>;
 }
 
-const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, onBudgetChange }) => {
+const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, onAddBudget, onUpdateBudget, onDeleteBudget }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
@@ -38,7 +40,7 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, on
   }, [budgets, transactions]);
 
   // Handle form submit to add/edit budget
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!category || !amount || isNaN(parseFloat(amount))) {
@@ -50,29 +52,32 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, on
     
     if (editingBudgetId) {
       // Edit existing budget
-      const updatedBudgets = budgets.map(budget => 
-        budget.id === editingBudgetId 
-          ? {
-              ...budget,
-              category,
-              amount: budgetAmount,
-              period,
-              lastUpdated: format(now, 'yyyy-MM-dd')
-            } 
-          : budget
-      );
-      onBudgetChange(updatedBudgets);
+      const existingBudget = budgets.find(b => b.id === editingBudgetId);
+      if (!existingBudget) return;
+      
+      const updatedBudget = {
+        ...existingBudget,
+        category,
+        amount: budgetAmount,
+        period,
+        lastUpdated: format(now, 'yyyy-MM-dd')
+      };
+      
+      // Call API to update budget
+      await onUpdateBudget(updatedBudget);
     } else {
       // Add new budget
       const newBudget: Budget = {
-        id: uuidv4(),
+        id: uuidv4(), // This ID will be replaced by the one generated in the backend
         category,
         amount: budgetAmount,
         period,
         createdAt: format(now, 'yyyy-MM-dd'),
         lastUpdated: format(now, 'yyyy-MM-dd')
       };
-      onBudgetChange([...budgets, newBudget]);
+      
+      // Call API to add budget
+      await onAddBudget(newBudget);
     }
     
     // Reset form
@@ -98,8 +103,9 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, on
   };
 
   // Delete a budget
-  const deleteBudget = (id: string) => {
-    onBudgetChange(budgets.filter(budget => budget.id !== id));
+  const deleteBudget = async (budgetId: string) => {
+    // Call API to delete budget
+    await onDeleteBudget(budgetId);
   };
 
   return (
