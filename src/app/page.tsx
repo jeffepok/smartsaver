@@ -11,22 +11,23 @@ import SavingsRecommendations from '@/components/SavingsRecommendations';
 import BudgetManager from '@/components/BudgetManager';
 import ExportOptions from '@/components/ExportOptions';
 import { Transaction, SavingsGoal, Budget, BudgetAlert } from '@/types';
+import { fetchSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '@/services/savingsGoalsService';
 import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb, FaWallet, FaSignOutAlt } from 'react-icons/fa';
 import { generateSavingsRecommendations } from '@/utils/savingsAnalyzer';
 
 export default function Home() {
   // State for transactions data
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  
+
   // State for savings goals
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
-  
+
   // State for budgets
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  
+
   // State for active tab
   const [activeTab, setActiveTab] = useState<string>('summary');
-  
+
   const router = useRouter();
 
   // Load data from API on component mount
@@ -35,13 +36,13 @@ export default function Home() {
     const fetchTransactions = async () => {
       try {
         const response = await fetch('/api/transactions');
-        
+
         if (!response.ok) {
           // If unauthorized, don't throw error as middleware will handle redirect
           if (response.status === 401) return;
           throw new Error('Failed to fetch transactions');
         }
-        
+
         const data = await response.json();
         if (data.transactions && data.transactions.length > 0) {
           setTransactions(data.transactions);
@@ -51,20 +52,11 @@ export default function Home() {
       }
     };
 
-    // Fetch savings goals from the API
-    const fetchSavingsGoals = async () => {
+    // Fetch savings goals from the API using our service
+    const loadSavingsGoals = async () => {
       try {
-        const response = await fetch('/api/savings-goals');
-        
-        if (!response.ok) {
-          if (response.status === 401) return;
-          throw new Error('Failed to fetch savings goals');
-        }
-        
-        const data = await response.json();
-        if (data.goals) {
-          setSavingsGoals(data.goals);
-        }
+        const goals = await fetchSavingsGoals();
+        setSavingsGoals(goals);
       } catch (error) {
         console.error('Error fetching savings goals:', error);
       }
@@ -74,12 +66,12 @@ export default function Home() {
     const fetchBudgets = async () => {
       try {
         const response = await fetch('/api/budgets');
-        
+
         if (!response.ok) {
           if (response.status === 401) return;
           throw new Error('Failed to fetch budgets');
         }
-        
+
         const data = await response.json();
         if (data.budgets) {
           setBudgets(data.budgets);
@@ -88,73 +80,45 @@ export default function Home() {
         console.error('Error fetching budgets:', error);
       }
     };
-    
+
     fetchTransactions();
-    fetchSavingsGoals();
+    loadSavingsGoals();
     fetchBudgets();
   }, []);
-  
+
   // Handle data loaded from CSV
   const handleDataLoaded = (data: Transaction[]) => {
     setTransactions(data);
     // No need to save here, the CSVUploader component now handles API saving
   };
-  
+
   // Handle adding a new savings goal
-  const handleAddGoal = async (goal: SavingsGoal) => {
+  const handleAddSavingsGoal = async (newGoal: SavingsGoal) => {
     try {
-      const response = await fetch('/api/savings-goals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(goal)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to add savings goal');
-      }
-      
-      const updatedGoals = [...savingsGoals, goal];
-      setSavingsGoals(updatedGoals);
+      const createdGoal = await createSavingsGoal(newGoal);
+      setSavingsGoals([...savingsGoals, createdGoal]);
     } catch (error) {
       console.error('Error adding savings goal:', error);
     }
   };
-  
+
   // Handle updating a savings goal
-  const handleUpdateGoal = async (updatedGoal: SavingsGoal) => {
+  const handleUpdateSavingsGoal = async (updatedGoal: SavingsGoal) => {
     try {
-      const response = await fetch(`/api/savings-goals/${updatedGoal.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedGoal)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update savings goal');
-      }
-      
-      const updatedGoals = savingsGoals.map((goal) => 
+      await updateSavingsGoal(updatedGoal);
+      setSavingsGoals(savingsGoals.map(goal =>
         goal.id === updatedGoal.id ? updatedGoal : goal
-      );
-      setSavingsGoals(updatedGoals);
+      ));
     } catch (error) {
       console.error('Error updating savings goal:', error);
     }
   };
-  
+
   // Handle deleting a savings goal
-  const handleDeleteGoal = async (goalId: string) => {
+  const handleDeleteSavingsGoal = async (goalId: string) => {
     try {
-      const response = await fetch(`/api/savings-goals/${goalId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete savings goal');
-      }
-      
-      const updatedGoals = savingsGoals.filter((goal) => goal.id !== goalId);
-      setSavingsGoals(updatedGoals);
+      await deleteSavingsGoal(goalId);
+      setSavingsGoals(savingsGoals.filter(goal => goal.id !== goalId));
     } catch (error) {
       console.error('Error deleting savings goal:', error);
     }
@@ -168,11 +132,11 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(budget)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to add budget');
       }
-      
+
       const data = await response.json();
       const savedBudget = data.budget;
       const updatedBudgets = [...budgets, savedBudget];
@@ -192,12 +156,12 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedBudget)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to update budget');
       }
-      
-      const updatedBudgets = budgets.map((budget) => 
+
+      const updatedBudgets = budgets.map((budget) =>
         budget.id === updatedBudget.id ? updatedBudget : budget
       );
       setBudgets(updatedBudgets);
@@ -214,24 +178,24 @@ export default function Home() {
       const response = await fetch(`/api/budgets/${budgetId}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to delete budget');
       }
-      
+
       const updatedBudgets = budgets.filter((budget) => budget.id !== budgetId);
       setBudgets(updatedBudgets);
     } catch (error) {
       console.error('Error deleting budget:', error);
     }
   };
-  
+
   // Render tab content based on active tab
   const renderTabContent = () => {
     if (transactions.length === 0) {
       return <CSVUploader onDataLoaded={handleDataLoaded} />;
     }
-    
+
     switch (activeTab) {
       case 'summary':
         return <ExpenseSummary transactions={transactions} />;
@@ -243,14 +207,14 @@ export default function Home() {
         return (
           <SavingsGoals
             goals={savingsGoals}
-            onAddGoal={handleAddGoal}
-            onUpdateGoal={handleUpdateGoal}
-            onDeleteGoal={handleDeleteGoal}
+            onAddGoal={handleAddSavingsGoal}
+            onUpdateGoal={handleUpdateSavingsGoal}
+            onDeleteGoal={handleDeleteSavingsGoal}
           />
         );
       case 'budget':
         return (
-          <BudgetManager 
+          <BudgetManager
             transactions={transactions}
             budgets={budgets}
             onAddBudget={handleAddBudget}
@@ -274,14 +238,14 @@ export default function Home() {
             SmartSave
             <span className="text-sm font-normal ml-2">Financial Assistant</span>
           </h1>
-          
+
           <button
             onClick={async () => {
               try {
                 const response = await fetch('/api/auth/logout', {
                   method: 'POST',
                 });
-                
+
                 if (response.ok) {
                   // Redirect to login page after logout
                   router.push('/auth/login');
@@ -295,27 +259,27 @@ export default function Home() {
             <FaSignOutAlt className="mr-2" />
             Logout
           </button>
-          
+
           <div className="flex items-center space-x-3">
             {transactions.length > 0 && (
               <>
-                <ExportOptions 
+                <ExportOptions
                   transactions={transactions}
                   savingsGoals={savingsGoals}
                   recommendations={generateSavingsRecommendations(transactions)}
                 />
-                
+
                 <button
                   onClick={async () => {
                     try {
                       const response = await fetch('/api/reset', {
                         method: 'POST'
                       });
-                      
+
                       if (!response.ok) {
                         throw new Error('Failed to reset data');
                       }
-                      
+
                       setTransactions([]);
                       setSavingsGoals([]);
                       setBudgets([]);
@@ -348,7 +312,7 @@ export default function Home() {
                 <FaChartPie className="mr-2" />
                 Expense Summary
               </button>
-              
+
               <button
                 onClick={() => setActiveTab('transactions')}
                 className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
@@ -360,7 +324,7 @@ export default function Home() {
                 <FaList className="mr-2" />
                 Transactions
               </button>
-              
+
               <button
                 onClick={() => setActiveTab('charts')}
                 className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
@@ -372,7 +336,7 @@ export default function Home() {
                 <FaChartLine className="mr-2" />
                 Spending Charts
               </button>
-              
+
               <button
                 onClick={() => setActiveTab('goals')}
                 className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
@@ -384,7 +348,7 @@ export default function Home() {
                 <FaBullseye className="mr-2" />
                 Savings Goals
               </button>
-              
+
               <button
                 onClick={() => setActiveTab('budget')}
                 className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
@@ -396,7 +360,7 @@ export default function Home() {
                 <FaWallet className="mr-2" />
                 Budget Manager
               </button>
-              
+
               <button
                 onClick={() => setActiveTab('recommendations')}
                 className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
@@ -414,7 +378,7 @@ export default function Home() {
 
         {renderTabContent()}
       </main>
-      
+
       {/* Footer */}
       <footer className="bg-gray-800 text-gray-300 py-4 mt-12">
         <div className="container mx-auto px-4 text-center text-sm">

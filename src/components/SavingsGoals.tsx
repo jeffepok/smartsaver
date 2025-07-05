@@ -17,13 +17,14 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
   onUpdateGoal,
   onDeleteGoal
 }) => {
+    console.log(goals);
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
-  
+
   // Deposit functionality
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
@@ -33,24 +34,24 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const goalData = {
       id: editingGoalId || uuidv4(),
       name,
-      targetAmount: parseFloat(targetAmount),
-      currentAmount: parseFloat(currentAmount) || 0,
+      target_amount: parseFloat(targetAmount),
+      current_amount: parseFloat(currentAmount) || 0,
       targetDate,
-      createdAt: editingGoalId 
+      createdAt: editingGoalId
         ? goals.find(g => g.id === editingGoalId)?.createdAt || format(new Date(), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd')
     };
-    
+
     if (editingGoalId) {
       onUpdateGoal(goalData);
     } else {
       onAddGoal(goalData);
     }
-    
+
     // Reset form
     setName('');
     setTargetAmount('');
@@ -59,17 +60,17 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
     setEditingGoalId(null);
     setShowAddForm(false);
   };
-  
+
   // Start editing a goal
   const startEditing = (goal: SavingsGoal) => {
     setEditingGoalId(goal.id);
     setName(goal.name);
-    setTargetAmount(goal.targetAmount.toString());
-    setCurrentAmount(goal.currentAmount.toString());
+    setTargetAmount(goal.target_amount.toString());
+    setCurrentAmount(goal.current_amount.toString());
     setTargetDate(goal.targetDate);
     setShowAddForm(true);
   };
-  
+
   // Open deposit modal
   const openDepositModal = (goal: SavingsGoal) => {
     setDepositGoalId(goal.id);
@@ -77,23 +78,23 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
     setDepositAmount('');
     setShowDepositModal(true);
   };
-  
+
   // Handle deposit submission
   const handleDepositSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!depositGoalId || !depositAmount || isNaN(parseFloat(depositAmount)) || parseFloat(depositAmount) <= 0) {
       return;
     }
-    
+
     const goal = goals.find(g => g.id === depositGoalId);
     if (!goal) return;
-    
+
     const updatedGoal = {
       ...goal,
-      currentAmount: goal.currentAmount + parseFloat(depositAmount)
+      current_amount: goal.current_amount + parseFloat(depositAmount)
     };
-    
+
     onUpdateGoal(updatedGoal);
     setShowDepositModal(false);
   };
@@ -116,7 +117,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
           {showAddForm ? 'Cancel' : '+ Add New Goal'}
         </button>
       </div>
-      
+
       {/* Add/Edit goal form */}
       {showAddForm && (
         <div className="mb-8 p-4 bg-blue-50 rounded-lg">
@@ -139,7 +140,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="target-amount" className="block text-sm font-medium text-gray-700 mb-1">
                   Target Amount (€)
@@ -156,7 +157,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="current-amount" className="block text-sm font-medium text-gray-700 mb-1">
                   Current Amount (€)
@@ -172,7 +173,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="target-date" className="block text-sm font-medium text-gray-700 mb-1">
                   Target Date
@@ -187,7 +188,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                 />
               </div>
             </div>
-            
+
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
@@ -199,14 +200,14 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
           </form>
         </div>
       )}
-      
+
       {/* List of goals */}
-      {goals.length > 0 ? (
+      {goals && goals.length > 0 ? (
         <div className="space-y-4">
           {goals.map((goal) => {
-            const progress = calculateProgress(goal.currentAmount, goal.targetAmount);
-            const remaining = goal.targetAmount - goal.currentAmount;
-            
+            const progress = calculateProgress(goal.current_amount, goal.target_amount);
+            const remaining = goal.target_amount - goal.current_amount;
+
             return (
               <div key={goal.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex justify-between items-start mb-2">
@@ -232,27 +233,27 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center mb-2">
                   <div className="text-lg font-bold">
-                    €{goal.currentAmount.toFixed(2)} / €{goal.targetAmount.toFixed(2)}
+                    €{goal.current_amount.toFixed(2)} / €{goal.target_amount.toFixed(2)}
                   </div>
                   <div className="ml-2 text-sm text-gray-600">
                     (€{remaining.toFixed(2)} remaining)
                   </div>
                 </div>
-                
+
                 <div className="mb-2 text-sm text-gray-600">
-                  Target date: {new Date(goal.targetDate).toLocaleDateString()}
+                  Target date: {new Date(goal.target_date).toLocaleDateString()}
                 </div>
-                
+
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
                     className="bg-blue-600 h-2.5 rounded-full"
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>
-                
+
                 <div className="mt-1 text-sm text-gray-600">
                   {progress.toFixed(1)}% complete
                 </div>
@@ -265,7 +266,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
           No savings goals set yet. Click "Add New Goal" to get started.
         </div>
       )}
-      
+
       {/* Deposit Modal */}
       {showDepositModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -288,7 +289,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                   placeholder="Enter amount"
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"

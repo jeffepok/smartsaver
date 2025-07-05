@@ -29,10 +29,10 @@ export interface MonthlySpending {
 export interface SavingsGoal {
   id: string;
   name: string;
-  targetAmount: number;
-  currentAmount: number;
-  targetDate: string;
-  createdAt: string;
+  target_amount: number;
+  current_amount: number;
+  target_date: string;
+  created_at: string;
 }
 
 // Savings recommendation type
