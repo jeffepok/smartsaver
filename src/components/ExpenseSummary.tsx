@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/types';
 import { getLastThreeMonthsTransactions, groupTransactionsByMonth, calculateMonthlySpending } from '@/utils/csvParser';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { calculateCategoryTotals, categoryColors } from '@/utils/categorization';
 import { 
   Chart as ChartJS, 
@@ -35,17 +35,36 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
-  // Get transactions from the last three months
-  const recentTransactions = getLastThreeMonthsTransactions(transactions);
+  // Initialize with a 3-month date range by default
+  const currentDate = new Date();
+  const [startDate, setStartDate] = useState<Date>(startOfMonth(subMonths(currentDate, 2))); // 3 months ago
+  const [endDate, setEndDate] = useState<Date>(endOfMonth(currentDate)); // today
+  
+  // Filter transactions based on date range
+  const filterTransactionsByDateRange = (transactions: Transaction[], start: Date, end: Date): Transaction[] => {
+    return transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return isWithinInterval(transactionDate, { start, end });
+    });
+  };
+  
+  // Filtered transactions based on date range
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+  
+  // Update filtered transactions when date range or transactions change
+  useEffect(() => {
+    const filtered = filterTransactionsByDateRange(transactions, startDate, endDate);
+    setFilteredTransactions(filtered);
+  }, [transactions, startDate, endDate]);
   
   // Group transactions by month
-  const groupedByMonth = groupTransactionsByMonth(recentTransactions);
+  const groupedByMonth = groupTransactionsByMonth(filteredTransactions);
   
   // Calculate monthly totals
   const monthlyTotals = calculateMonthlySpending(groupedByMonth);
   
   // Get category totals across all months
-  const categoryTotals = calculateCategoryTotals(recentTransactions);
+  const categoryTotals = calculateCategoryTotals(filteredTransactions);
   
   // Sort categories by total amount (descending)
   const sortedCategories = Object.entries(categoryTotals)
@@ -54,6 +73,19 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
   
   // Calculate total spending
   const totalSpending = sortedCategories.reduce((total, [_, amount]) => total + amount, 0);
+  
+  // Handle date range change
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value) {
+      setStartDate(new Date(e.target.value));
+    }
+  };
+  
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value) {
+      setEndDate(new Date(e.target.value));
+    }
+  };
 
   // Prepare data for category distribution chart (doughnut)
   const categoryChartData = {
@@ -118,7 +150,33 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
 
   return (
     <div className="w-full p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-6">Dashboard</h2>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <h2 className="text-xl font-semibold">Dashboard</h2>
+        
+        {/* Date range filter */}
+        <div className="mt-3 md:mt-0 flex flex-col sm:flex-row gap-3 bg-gray-50 p-3 rounded-lg">
+          <div className="flex flex-col">
+            <label htmlFor="start-date" className="text-xs text-gray-600 mb-1">Start Date</label>
+            <input 
+              type="date" 
+              id="start-date"
+              value={format(startDate, 'yyyy-MM-dd')} 
+              onChange={handleStartDateChange}
+              className="px-2 py-1 border rounded text-sm" 
+            />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="end-date" className="text-xs text-gray-600 mb-1">End Date</label>
+            <input 
+              type="date" 
+              id="end-date"
+              value={format(endDate, 'yyyy-MM-dd')} 
+              onChange={handleEndDateChange}
+              className="px-2 py-1 border rounded text-sm" 
+            />
+          </div>
+        </div>
+      </div>
       
       {/* Monthly spending overview */}
       <div className="mb-8">
