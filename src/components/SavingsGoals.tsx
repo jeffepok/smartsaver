@@ -40,9 +40,9 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
       name,
       target_amount: parseFloat(targetAmount),
       current_amount: parseFloat(currentAmount) || 0,
-      targetDate,
-      createdAt: editingGoalId
-        ? goals.find(g => g.id === editingGoalId)?.createdAt || format(new Date(), 'yyyy-MM-dd')
+      target_date: targetDate,
+      created_at: editingGoalId
+        ? goals.find(g => g.id === editingGoalId)?.created_at || format(new Date(), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd')
     };
 
@@ -67,7 +67,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
     setName(goal.name);
     setTargetAmount(goal.target_amount.toString());
     setCurrentAmount(goal.current_amount.toString());
-    setTargetDate(goal.targetDate);
+    setTargetDate(goal.target_date);
     setShowAddForm(true);
   };
 

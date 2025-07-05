@@ -66,6 +66,7 @@ export async function GET(request: NextRequest, { params }: { params: Params }) 
 
 export async function PUT(request: NextRequest, { params }: { params: Params }) {
   try {
+    const { id } = await params;
     // Get user ID from session
     const userId = request.cookies.get('session_id')?.value;
 
@@ -99,19 +100,18 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
     }
 
     // Get updated goal data
-    const { name, targetAmount, currentAmount, targetDate, category } = await request.json();
+    const { name, target_amount, current_amount, target_date } = await request.json();
 
     // Update the goal
     db.prepare(`
       UPDATE savings_goals
-      SET name = ?, target_amount = ?, current_amount = ?, target_date = ?, category = ?
+      SET name = ?, target_amount = ?, current_amount = ?, target_date = ?
       WHERE id = ? AND user_id = ?
     `).run(
       name || existingGoal.name,
-      targetAmount || existingGoal.target_amount,
-      currentAmount !== undefined ? currentAmount : existingGoal.current_amount,
-      targetDate || existingGoal.target_date,
-      category || existingGoal.category,
+      target_amount || existingGoal.target_amount,
+      current_amount !== undefined ? current_amount : existingGoal.current_amount,
+      target_date || existingGoal.target_date,
       id,
       userIdNum
     );
@@ -133,6 +133,7 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
 
 export async function DELETE(request: NextRequest, { params }: { params: Params }) {
   try {
+    const { id } = await params;
     // Get user ID from session
     const userId = request.cookies.get('session_id')?.value;
 
@@ -157,7 +158,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Params 
     // Database is already imported
     const existingGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ? AND user_id = ?'
-    ).get(id, userId);
+    ).get(id, userIdNum);
 
     if (!existingGoal) {
       return NextResponse.json(
