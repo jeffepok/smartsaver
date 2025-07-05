@@ -230,7 +230,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-blue-700 text-white p-4 shadow-md">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
@@ -297,10 +297,10 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="container mx-auto py-6 px-4">
+      <main className="container mx-auto px-4 py-6 flex-grow">
         {transactions.length > 0 && (
-          <nav className="mb-6 overflow-x-auto">
-            <div className="flex space-x-2 border-b border-gray-200 min-w-max">
+          <nav className="mb-6">
+            <div className="flex overflow-x-auto space-x-1 border-b border-gray-200 min-w-max">
               <button
                 onClick={() => setActiveTab('summary')}
                 className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
@@ -368,7 +368,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-gray-300 py-4 mt-12">
+      <footer className="bg-gray-800 text-gray-300 py-4 mt-auto">
         <div className="container mx-auto px-4 text-center text-sm">
           <p>&copy; {new Date().getFullYear()} SmartSave Financial Assistant</p>
           <p className="mt-1">A Next.js application for financial insights and savings recommendations</p>
