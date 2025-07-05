@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import { Transaction } from '../types';
 import { categorizeTransaction } from './categorization';
 import { subMonths, isAfter, parseISO, format } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 
 // Parse CSV data into Transaction objects
 export const parseCSVData = (csvData: string): Promise<Transaction[]> => {
@@ -17,6 +18,7 @@ export const parseCSVData = (csvData: string): Promise<Transaction[]> => {
 
             // Create Transaction object
             const transaction: Transaction = {
+              id: uuidv4(), // Add unique ID
               date: row.date,
               description: row.description,
               amount: isNaN(amount) ? 0 : amount,

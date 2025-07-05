@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { parseCSVData } from '@/utils/csvParser';
+import React, { useState, useRef } from 'react';
+import Papa from 'papaparse';
 import { Transaction } from '@/types';
+import { categorizeTransaction } from '@/utils/categorization';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CSVUploaderProps {
   onDataLoaded: (data: Transaction[]) => void;
@@ -10,78 +12,131 @@ const CSVUploader: React.FC<CSVUploaderProps> = ({ onDataLoaded }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const setIsLoading = (isLoading: boolean) => {
+    setLoading(isLoading);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsLoading(true);
+    setError('');
     const file = e.target.files?.[0];
-    if (!file) return;
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Read file content
-      const content = await readFileContent(file);
-      
-      // Parse CSV data
-      const parsedData = await parseCSVData(content);
-      
-      // Pass data to parent component
-      onDataLoaded(parsedData);
-      
-    } catch (err) {
-      console.error('Error processing CSV file:', err);
-      setError('Failed to process the CSV file. Please ensure it follows the correct format.');
-    } finally {
-      setLoading(false);
+
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        complete: async (results) => {
+          try {
+            const parsedData = processCSVData(results.data as Record<string, string>[]);
+            
+            // Create a FormData object for the file upload
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('transactions', JSON.stringify(parsedData));
+            
+            // Upload to the API
+            const response = await fetch('/api/csv/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to upload CSV');
+            }
+            
+            // Still call the onDataLoaded callback for local state updates
+            onDataLoaded(parsedData);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error processing CSV data. Please check the file format.');
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        error: () => {
+          setError('Error parsing CSV file. Please check the file format.');
+          setIsLoading(false);
+        }
+      });
     }
   };
-  
-  // Helper function to read file content
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          resolve(event.target.result as string);
-        } else {
-          reject(new Error('Failed to read file content'));
-        }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error('Error reading file'));
-      };
-      
-      reader.readAsText(file);
-    });
+
+  const processCSVData = (data: Record<string, string>[]): Transaction[] => {
+    return data
+      .filter(row => {
+        // Filter out rows with missing required fields
+        return row.date && row.description && row.amount;
+      })
+      .map(row => {
+        // Convert amount to number
+        const amount = parseFloat(row.amount.replace(/,/g, ''));
+        
+        // Create transaction object with UUID
+        const transaction: Transaction = {
+          id: uuidv4(), // Add unique ID for database storage
+          date: row.date,
+          description: row.description,
+          amount: isNaN(amount) ? 0 : amount,
+          type: row.type || '',
+          account_number: row.account_number || '',
+          currency: row.currency || '€'
+        };
+        
+        // Add category based on description
+        return categorizeTransaction(transaction);
+      });
   };
-  
+
   // Function to load sample data from public file
   const loadSampleData = async () => {
+    setIsLoading(true);
+    setError('');
+
     try {
-      setLoading(true);
-      setError(null);
-      
       // Fetch sample data from public directory
       const response = await fetch('/sample_data.csv');
+      const csvData = await response.text();
       
-      if (!response.ok) {
-        throw new Error(`Failed to load sample data: ${response.status}`);
-      }
-      
-      const sampleData = await response.text();
-      
-      // Parse sample data
-      const parsedData = await parseCSVData(sampleData);
-      
-      // Pass data to parent component
-      onDataLoaded(parsedData);
-      
+      Papa.parse(csvData, {
+        header: true,
+        complete: async (results) => {
+          try {
+            const parsedData = processCSVData(results.data as Record<string, string>[]);
+            
+            // Create a file object from the CSV data
+            const file = new File([csvData], 'sample_data.csv', { type: 'text/csv' });
+            
+            // Create a FormData object for the file upload
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('transactions', JSON.stringify(parsedData));
+            
+            // Upload to the API
+            const uploadResponse = await fetch('/api/csv/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json();
+              throw new Error(errorData.error || 'Failed to upload sample CSV');
+            }
+            
+            // Call the onDataLoaded callback for local state updates
+            onDataLoaded(parsedData);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error processing sample CSV data.');
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        error: () => {
+          setError('Error parsing sample CSV file.');
+          setIsLoading(false);
+        }
+      });
     } catch (err) {
-      console.error('Error loading sample data:', err);
-      setError('Failed to load sample data. Please try again or upload your own CSV file.');
-    } finally {
-      setLoading(false);
+      setError('Failed to load sample data file.');
+      setIsLoading(false);
     }
   };
 

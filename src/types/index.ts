@@ -1,11 +1,12 @@
 // Financial transaction data type
 export interface Transaction {
+  id: string;
   date: string;
   description: string;
   amount: number;
-  type: string;
-  account_number: string;
-  currency: string;
+  type?: string;
+  account_number?: string;
+  currency?: string;
   category?: string; // Added for categorization
 }
 

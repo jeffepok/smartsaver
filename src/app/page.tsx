@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import CSVUploader from '@/components/CSVUploader';
 import TransactionsList from '@/components/TransactionsList';
 import ExpenseSummary from '@/components/ExpenseSummary';
@@ -8,12 +9,9 @@ import SpendingCharts from '@/components/SpendingCharts';
 import SavingsGoals from '@/components/SavingsGoals';
 import SavingsRecommendations from '@/components/SavingsRecommendations';
 import BudgetManager from '@/components/BudgetManager';
-import { Transaction, SavingsGoal, Budget } from '@/types';
-import { categorizeTransaction } from '@/utils/categorization';
-
-import { saveTransactions, loadTransactions, saveSavingsGoals, loadSavingsGoals, saveBudgets, loadBudgets, clearStoredData } from '@/utils/storage';
-import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb, FaWallet } from 'react-icons/fa';
 import ExportOptions from '@/components/ExportOptions';
+import { Transaction, SavingsGoal, Budget, BudgetAlert } from '@/types';
+import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb, FaWallet, FaSignOutAlt } from 'react-icons/fa';
 import { generateSavingsRecommendations } from '@/utils/savingsAnalyzer';
 
 export default function Home() {
@@ -29,52 +27,97 @@ export default function Home() {
   // State for active tab
   const [activeTab, setActiveTab] = useState<string>('summary');
   
-  // Load stored data on component mount
+  const router = useRouter();
+
+  // Load data from API on component mount
   useEffect(() => {
-    const storedTransactions = loadTransactions();
-    const storedGoals = loadSavingsGoals();
-    const storedBudgets = loadBudgets();
+    // Fetch transactions from the API
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch('/api/transactions');
+        
+        if (!response.ok) {
+          // If unauthorized, don't throw error as middleware will handle redirect
+          if (response.status === 401) return;
+          throw new Error('Failed to fetch transactions');
+        }
+        
+        const data = await response.json();
+        if (data.transactions && data.transactions.length > 0) {
+          setTransactions(data.transactions);
+        }
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      }
+    };
     
-    if (storedTransactions.length > 0) {
-      setTransactions(storedTransactions);
-    }
-    
-    if (storedGoals.length > 0) {
-      setSavingsGoals(storedGoals);
-    }
-    
-    if (storedBudgets.length > 0) {
-      setBudgets(storedBudgets);
-    }
+    fetchTransactions();
   }, []);
   
   // Handle data loaded from CSV
   const handleDataLoaded = (data: Transaction[]) => {
     setTransactions(data);
-    saveTransactions(data);
+    // No need to save here, the CSVUploader component now handles API saving
   };
   
   // Handle adding a new savings goal
-  const handleAddGoal = (goal: SavingsGoal) => {
-    const updatedGoals = [...savingsGoals, goal];
-    setSavingsGoals(updatedGoals);
-    saveSavingsGoals(updatedGoals);
+  const handleAddGoal = async (goal: SavingsGoal) => {
+    try {
+      const response = await fetch('/api/savings-goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(goal)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add savings goal');
+      }
+      
+      const updatedGoals = [...savingsGoals, goal];
+      setSavingsGoals(updatedGoals);
+    } catch (error) {
+      console.error('Error adding savings goal:', error);
+    }
   };
   
   // Handle updating a savings goal
-  const handleUpdateGoal = (updatedGoal: SavingsGoal) => {
-    const updatedGoals = savingsGoals.map((goal) => 
-      goal.id === updatedGoal.id ? updatedGoal : goal
-    );
-    setSavingsGoals(updatedGoals);
-    saveSavingsGoals(updatedGoals);
+  const handleUpdateGoal = async (updatedGoal: SavingsGoal) => {
+    try {
+      const response = await fetch(`/api/savings-goals/${updatedGoal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedGoal)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update savings goal');
+      }
+      
+      const updatedGoals = savingsGoals.map((goal) => 
+        goal.id === updatedGoal.id ? updatedGoal : goal
+      );
+      setSavingsGoals(updatedGoals);
+    } catch (error) {
+      console.error('Error updating savings goal:', error);
+    }
   };
   
   // Handle deleting a savings goal
-  const handleDeleteGoal = (goalId: string) => {
-    const updatedGoals = savingsGoals.filter((goal) => goal.id !== goalId);
-    setSavingsGoals(updatedGoals);
-    saveSavingsGoals(updatedGoals);
+  const handleDeleteGoal = async (goalId: string) => {
+    try {
+      const response = await fetch(`/api/savings-goals/${goalId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete savings goal');
+      }
+      
+      const updatedGoals = savingsGoals.filter((goal) => goal.id !== goalId);
+      setSavingsGoals(updatedGoals);
+    } catch (error) {
+      console.error('Error deleting savings goal:', error);
+    }
   };
   
   // Render tab content based on active tab
@@ -124,6 +167,27 @@ export default function Home() {
             <span className="text-sm font-normal ml-2">Financial Assistant</span>
           </h1>
           
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/auth/logout', {
+                  method: 'POST',
+                });
+                
+                if (response.ok) {
+                  // Redirect to login page after logout
+                  router.push('/auth/login');
+                }
+              } catch (error) {
+                console.error('Error logging out:', error);
+              }
+            }}
+            className="px-4 py-2 ml-2 bg-blue-800 rounded hover:bg-blue-900 transition-colors text-sm flex items-center"
+          >
+            <FaSignOutAlt className="mr-2" />
+            Logout
+          </button>
+          
           <div className="flex items-center space-x-3">
             {transactions.length > 0 && (
               <>
@@ -134,11 +198,22 @@ export default function Home() {
                 />
                 
                 <button
-                  onClick={() => {
-                    setTransactions([]);
-                    setSavingsGoals([]);
-                    setBudgets([]);
-                    clearStoredData();
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/reset', {
+                        method: 'POST'
+                      });
+                      
+                      if (!response.ok) {
+                        throw new Error('Failed to reset data');
+                      }
+                      
+                      setTransactions([]);
+                      setSavingsGoals([]);
+                      setBudgets([]);
+                    } catch (error) {
+                      console.error('Error resetting data:', error);
+                    }
                   }}
                   className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-800 transition-colors text-sm"
                 >
