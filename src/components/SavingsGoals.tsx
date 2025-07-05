@@ -18,7 +18,6 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
   onUpdateGoal,
   onDeleteGoal
 }) => {
-    console.log(goals);
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -32,9 +31,12 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
   const [depositDescription, setDepositDescription] = useState('');
   const [depositGoalId, setDepositGoalId] = useState<string | null>(null);
   const [depositGoalName, setDepositGoalName] = useState('');
-  
+
   // Track which goals have expanded deposit history
   const [expandedGoalIds, setExpandedGoalIds] = useState<Set<string>>(new Set());
+
+  // Refresh trigger for deposit history
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -84,7 +86,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
     setDepositDescription('');
     setShowDepositModal(true);
   };
-  
+
   // Toggle deposit history visibility
   const toggleDepositHistory = (goalId: string) => {
     const newExpandedGoalIds = new Set(expandedGoalIds);
@@ -106,23 +108,34 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
 
     const goal = goals.find(g => g.id === depositGoalId);
     if (!goal) return;
-    
-    // We're not directly updating current_amount anymore as the backend will handle it
-    // Instead we pass the deposit info to the update function
+
+    const depositAmountNum = parseFloat(depositAmount);
+
+    // Calculate new current amount for immediate UI update
+    const newCurrentAmount = goal.current_amount + depositAmountNum;
+
+    // Create an updated goal with both the deposit info AND the updated current_amount
     const updatedGoal = {
       ...goal,
+      current_amount: newCurrentAmount, // Immediately update the UI with new amount
       is_deposit: true,
-      deposit_amount: parseFloat(depositAmount),
+      deposit_amount: depositAmountNum,
       deposit_description: depositDescription || `Deposit to ${goal.name}`
     };
 
+    // Send to the backend via the parent component
     onUpdateGoal(updatedGoal);
+
+    // Close modal
     setShowDepositModal(false);
-    
+
     // Expand the goal's deposit history to show the new deposit
     const newExpandedGoalIds = new Set(expandedGoalIds);
     newExpandedGoalIds.add(depositGoalId);
     setExpandedGoalIds(newExpandedGoalIds);
+
+    // Increment refresh trigger to force deposit history to update
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Calculate progress percentage
@@ -283,10 +296,10 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                 <div className="mt-1 text-sm text-gray-600">
                   {progress.toFixed(1)}% complete
                 </div>
-                
+
                 {/* Deposit history toggle */}
                 <div className="mt-3 pt-2 border-t border-gray-100">
-                  <button 
+                  <button
                     onClick={() => toggleDepositHistory(goal.id)}
                     className="text-sm flex items-center text-gray-600 hover:text-blue-600 transition-colors"
                   >
@@ -302,10 +315,16 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                     )}
                   </button>
                 </div>
-                
+
                 {/* Deposit history component */}
                 {expandedGoalIds.has(goal.id) && (
-                  <DepositHistory savingsGoalId={goal.id} limit={5} />
+                  <div className="mt-2">
+                    <DepositHistory
+                      savingsGoalId={goal.id}
+                      limit={5}
+                      refreshTrigger={refreshTrigger}
+                    />
+                  </div>
                 )}
               </div>
             );
@@ -339,7 +358,7 @@ const SavingsGoals: React.FC<SavingsGoalsProps> = ({
                   placeholder="Enter amount"
                 />
               </div>
-              
+
               <div className="mb-4">
                 <label htmlFor="deposit-description" className="block text-sm font-medium text-gray-700 mb-1">
                   Description (optional)

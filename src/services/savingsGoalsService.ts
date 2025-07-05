@@ -26,6 +26,7 @@ export const fetchSavingsGoals = async (): Promise<SavingsGoal[]> => {
 // Create a new savings goal
 export const createSavingsGoal = async (goal: Omit<SavingsGoal, 'id' | 'createdAt'>): Promise<SavingsGoal> => {
   try {
+    console.log(goal);
     const response = await fetch('/api/savings-goals', {
       method: 'POST',
       headers: {
@@ -35,8 +36,10 @@ export const createSavingsGoal = async (goal: Omit<SavingsGoal, 'id' | 'createdA
       body: JSON.stringify(goal),
     });
 
+    console.log(response);
+
     if (!response.ok) {
-      throw new Error('Failed to create savings goal');
+      throw new Error(`Failed to create savings goal: ${response.statusText}`);
     }
 
     const data = await response.json();

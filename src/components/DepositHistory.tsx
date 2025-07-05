@@ -7,11 +7,13 @@ import { FaCoins, FaSpinner } from 'react-icons/fa';
 interface DepositHistoryProps {
   savingsGoalId?: string;
   limit?: number;
+  refreshTrigger?: number; // A value that changes to trigger a refresh
 }
 
 const DepositHistory: React.FC<DepositHistoryProps> = ({
   savingsGoalId,
-  limit = 5
+  limit = 5,
+  refreshTrigger = 0
 }) => {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +36,7 @@ const DepositHistory: React.FC<DepositHistoryProps> = ({
     }
 
     fetchDeposits();
-  }, [savingsGoalId, limit]);
+  }, [savingsGoalId, limit, refreshTrigger]); // Include refreshTrigger to refetch when it changes
 
   if (isLoading) {
     return (

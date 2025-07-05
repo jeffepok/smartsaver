@@ -65,10 +65,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get request body
-    const { name, targetAmount, currentAmount, targetDate } = await request.json();
-
-    // Validate required fields
-    if (!name || !targetAmount) {
+    const { name, target_amount, current_amount, target_date } = await request.json();
+    console.log(name, target_amount, current_amount, target_date);
+    if (!name || !target_amount) {
       return NextResponse.json(
         { error: 'Name and target amount are required' },
         { status: 400 }
@@ -87,9 +86,9 @@ export async function POST(request: NextRequest) {
       goalId,
       userId,
       name,
-      targetAmount,
-      currentAmount || 0,
-      targetDate || null,
+      target_amount,
+      current_amount || 0,
+      target_date || null,
     );
 
     // Return the created goal
