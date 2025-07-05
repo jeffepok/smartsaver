@@ -110,20 +110,25 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
         // Calculate the new current amount after the deposit
         const newCurrentAmount = existingGoal.current_amount + deposit_amount;
         
+        // Create a deposit record with timestamp
+        const depositId = uuidv4();
+        const depositDate = format(new Date(), 'yyyy-MM-dd');
+        
         // Record the deposit in the deposits table
         db.prepare(`
           INSERT INTO deposits (id, user_id, savings_goal_id, amount, description, created_at)
           VALUES (?, ?, ?, ?, ?, ?)
         `).run(
-          uuidv4(),
+          depositId,
           userIdNum,
           id,
           deposit_amount,
           deposit_description || `Deposit to ${existingGoal.name}`,
-          format(new Date(), 'yyyy-MM-dd')
+          depositDate
         );
         
         // Update the goal with the new current amount
+        // Important: We're always using newCurrentAmount here, not any value from the request
         db.prepare(`
           UPDATE savings_goals
           SET name = ?, target_amount = ?, current_amount = ?, target_date = ?
@@ -131,11 +136,14 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
         `).run(
           name || existingGoal.name,
           target_amount || existingGoal.target_amount,
-          newCurrentAmount, // Use the calculated new amount after deposit
+          newCurrentAmount, // Always use calculated amount to ensure consistency
           target_date || existingGoal.target_date,
           id,
           userIdNum
         );
+        
+        // Log the successful deposit
+        console.log(`Deposit of ${deposit_amount} recorded for goal '${existingGoal.name}' (${id}). New balance: ${newCurrentAmount}`);
       } else {
         // Regular update without deposit
         db.prepare(`
