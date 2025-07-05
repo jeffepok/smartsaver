@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CSVUploader from '@/components/CSVUploader';
 import ExpenseSummary from '@/components/ExpenseSummary';
 import TransactionsList from '@/components/TransactionsList';
@@ -8,11 +8,28 @@ import SpendingCharts from '@/components/SpendingCharts';
 import SavingsGoals from '@/components/SavingsGoals';
 import SavingsRecommendations from '@/components/SavingsRecommendations';
 import { Transaction, SavingsGoal } from '@/types';
+import { saveTransactions, loadTransactions, saveSavingsGoals, loadSavingsGoals, clearStoredData } from '@/utils/storage';
 import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb } from 'react-icons/fa';
+import ExportOptions from '@/components/ExportOptions';
+import { generateSavingsRecommendations } from '@/utils/savingsAnalyzer';
 
 export default function Home() {
   // State for transactions data
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  
+  // Load stored data on component mount
+  useEffect(() => {
+    const storedTransactions = loadTransactions();
+    const storedGoals = loadSavingsGoals();
+    
+    if (storedTransactions.length > 0) {
+      setTransactions(storedTransactions);
+    }
+    
+    if (storedGoals.length > 0) {
+      setSavingsGoals(storedGoals);
+    }
+  }, []);
   
   // State for savings goals
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
@@ -23,23 +40,30 @@ export default function Home() {
   // Handle data loaded from CSV
   const handleDataLoaded = (data: Transaction[]) => {
     setTransactions(data);
+    saveTransactions(data);
   };
   
   // Handle adding a new savings goal
   const handleAddGoal = (goal: SavingsGoal) => {
-    setSavingsGoals([...savingsGoals, goal]);
+    const updatedGoals = [...savingsGoals, goal];
+    setSavingsGoals(updatedGoals);
+    saveSavingsGoals(updatedGoals);
   };
   
   // Handle updating a savings goal
   const handleUpdateGoal = (updatedGoal: SavingsGoal) => {
-    setSavingsGoals(
-      savingsGoals.map((goal) => (goal.id === updatedGoal.id ? updatedGoal : goal))
+    const updatedGoals = savingsGoals.map((goal) => 
+      goal.id === updatedGoal.id ? updatedGoal : goal
     );
+    setSavingsGoals(updatedGoals);
+    saveSavingsGoals(updatedGoals);
   };
   
   // Handle deleting a savings goal
   const handleDeleteGoal = (goalId: string) => {
-    setSavingsGoals(savingsGoals.filter((goal) => goal.id !== goalId));
+    const updatedGoals = savingsGoals.filter((goal) => goal.id !== goalId);
+    setSavingsGoals(updatedGoals);
+    saveSavingsGoals(updatedGoals);
   };
   
   // Render tab content based on active tab
@@ -81,14 +105,27 @@ export default function Home() {
             <span className="text-sm font-normal ml-2">Financial Assistant</span>
           </h1>
           
-          {transactions.length > 0 && (
-            <button
-              onClick={() => setTransactions([])}
-              className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-800 transition-colors text-sm"
-            >
-              Reset & Upload New Data
-            </button>
-          )}
+          <div className="flex items-center space-x-3">
+            {transactions.length > 0 && (
+              <>
+                <ExportOptions 
+                  transactions={transactions}
+                  savingsGoals={savingsGoals}
+                  recommendations={generateSavingsRecommendations(transactions)}
+                />
+                
+                <button
+                  onClick={() => {
+                    setTransactions([]);
+                    clearStoredData();
+                  }}
+                  className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-800 transition-colors text-sm"
+                >
+                  Reset & Upload New Data
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

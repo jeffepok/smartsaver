@@ -56,32 +56,20 @@ const CSVUploader: React.FC<CSVUploaderProps> = ({ onDataLoaded }) => {
     });
   };
   
-  // Function to load sample data (for demo purposes)
+  // Function to load sample data from public file
   const loadSampleData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Sample CSV data in the required format
-      const sampleData = `date,description,amount,type,account_number,currency
-2025-06-01,Salary deposit,3500,income,1234567890,EUR
-2025-06-05,Rent payment,-1200,expense,1234567890,EUR
-2025-06-10,Grocery shopping,-150,expense,1234567890,EUR
-2025-06-15,Restaurant dinner,-85,expense,1234567890,EUR
-2025-06-20,Amazon purchase,-120,expense,1234567890,EUR
-2025-06-25,Uber rides,-45,expense,1234567890,EUR
-2025-05-01,Salary deposit,3500,income,1234567890,EUR
-2025-05-05,Rent payment,-1200,expense,1234567890,EUR
-2025-05-12,Grocery shopping,-180,expense,1234567890,EUR
-2025-05-18,Netflix subscription,-15,expense,1234567890,EUR
-2025-05-22,Clothing store,-95,expense,1234567890,EUR
-2025-05-29,Gas station,-60,expense,1234567890,EUR
-2025-04-01,Salary deposit,3500,income,1234567890,EUR
-2025-04-05,Rent payment,-1200,expense,1234567890,EUR
-2025-04-10,Grocery shopping,-135,expense,1234567890,EUR
-2025-04-15,Movie tickets,-30,expense,1234567890,EUR
-2025-04-20,Pharmacy,-65,expense,1234567890,EUR
-2025-04-25,Electricity bill,-90,expense,1234567890,EUR`;
+      // Fetch sample data from public directory
+      const response = await fetch('/sample_data.csv');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load sample data: ${response.status}`);
+      }
+      
+      const sampleData = await response.text();
       
       // Parse sample data
       const parsedData = await parseCSVData(sampleData);
@@ -91,7 +79,7 @@ const CSVUploader: React.FC<CSVUploaderProps> = ({ onDataLoaded }) => {
       
     } catch (err) {
       console.error('Error loading sample data:', err);
-      setError('Failed to load sample data.');
+      setError('Failed to load sample data. Please try again or upload your own CSV file.');
     } finally {
       setLoading(false);
     }
