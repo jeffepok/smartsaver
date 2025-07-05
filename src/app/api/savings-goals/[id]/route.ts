@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getUserById } from '@/lib/auth';
 
+interface SavingsGoal {
+  id: number;
+  user_id: number;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  target_date: string;
+  category: string;
+}
+
 interface Params {
   id: string;
 }
@@ -77,7 +87,7 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
     // Verify goal exists and belongs to user
     const existingGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ? AND user_id = ?'
-    ).get(params.id, userIdNum);
+    ).get(params.id, userIdNum) as SavingsGoal | undefined;
 
     if (!existingGoal) {
       return NextResponse.json(
@@ -107,7 +117,7 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
     // Get updated goal
     const updatedGoal = db.prepare(
       'SELECT * FROM savings_goals WHERE id = ?'
-    ).get(params.id);
+    ).get(params.id) as SavingsGoal;
 
     return NextResponse.json({ goal: updatedGoal });
   } catch (error) {

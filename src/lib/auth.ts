@@ -5,6 +5,7 @@ export interface User {
   id: number;
   email: string;
   name?: string;
+  password?: string;
 }
 
 /**
@@ -44,11 +45,12 @@ export async function createUser(email: string, password: string, name?: string)
 export async function verifyCredentials(email: string, password: string): Promise<User | null> {
   try {
     const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
-    const user = stmt.get(email);
+    const user = stmt.get(email) as User;
 
     if (!user) {
       return null;
     }
+    if (!user.password) throw Error("User record has no password.")
 
     const passwordMatches = await bcrypt.compare(password, user.password);
 
