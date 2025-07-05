@@ -34,19 +34,29 @@ export async function GET(request: NextRequest) {
       JOIN savings_goals g ON d.savings_goal_id = g.id
       WHERE d.user_id = ?
     `;
-    const queryParams = [userIdNum];
+    const queryParams: any[] = [userIdNum];
     // Add savings goal filter if provided
     if (savingsGoalId) {
       query += ' AND d.savings_goal_id = ?';
-      queryParams.push(parseInt(savingsGoalId, 10));
+      queryParams.push(savingsGoalId); // Don't parse as int - savings_goal_id is a UUID string
     }
 
     // Add sorting and limit
     query += ' ORDER BY d.created_at DESC LIMIT ?';
     queryParams.push(limit);
 
-    // Execute query
-    const deposits = db.prepare(query).all(...queryParams);
+    // Execute query - we need to use explicit binding instead of spreading queryParams
+    // because SQLite is strict about parameter types
+    let stmt = db.prepare(query);
+
+    let deposits;
+    if (savingsGoalId && limit) {
+      deposits = stmt.all(userIdNum, savingsGoalId, limit);
+    } else if (savingsGoalId) {
+      deposits = stmt.all(userIdNum, savingsGoalId);
+    } else {
+      deposits = stmt.all(userIdNum, limit);
+    }
 
     return NextResponse.json({ deposits });
   } catch (error) {
