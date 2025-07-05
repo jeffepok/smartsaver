@@ -76,6 +76,8 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
         body: JSON.stringify({
           userMessage: newUserMessage.text,
           financialContext,
+          transactions,  // Pass transactions for rule-based recommendations
+          budgets,       // Pass budgets for rule-based recommendations
         }),
       });
 

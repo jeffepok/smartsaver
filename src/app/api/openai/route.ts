@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getSpendingRecommendations } from '@/utils/spendingRecommendations';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -10,13 +11,15 @@ const openai = new OpenAI({
 interface RequestBody {
   userMessage: string;
   financialContext: string;
+  transactions?: any[];
+  budgets?: any[];
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Get the request body
     const body: RequestBody = await request.json();
-    const { userMessage, financialContext } = body;
+    const { userMessage, financialContext, transactions = [], budgets = [] } = body;
 
     if (!userMessage) {
       return NextResponse.json(
@@ -30,6 +33,21 @@ export async function POST(request: NextRequest) {
         { error: 'OpenAI API key not configured', botMessage: "I'm sorry, the assistant is not configured properly. Please contact support." },
         { status: 500 }
       );
+    }
+
+    // Check if the user is asking about spending reductions or cost-cutting
+    const isAskingAboutSpendingReduction = userMessage.toLowerCase().includes('spend') ||
+      userMessage.toLowerCase().includes('cut') ||
+      userMessage.toLowerCase().includes('save') ||
+      userMessage.toLowerCase().includes('budget') ||
+      userMessage.toLowerCase().includes('reduce') ||
+      userMessage.toLowerCase().includes('saving') ||
+      userMessage.toLowerCase().includes('money');
+    
+    // If asking about spending reductions, use our rule-based recommendations
+    let ruleBasedRecommendations: string[] = [];
+    if (isAskingAboutSpendingReduction && transactions.length > 0) {
+      ruleBasedRecommendations = getSpendingRecommendations(transactions, budgets);
     }
 
     // Create the system message that provides context about the app and financial data
@@ -49,7 +67,15 @@ export async function POST(request: NextRequest) {
     
     Answer the user's questions based on this financial context. If you can't answer a question based on the data provided, 
     politely explain that you need more information or that the data isn't available.
-    Keep responses concise and focused on financial insights.`;
+    Keep responses concise and focused on financial insights.
+    
+    ${isAskingAboutSpendingReduction && ruleBasedRecommendations.length > 0 ? 
+      `IMPORTANT: When suggesting ways to reduce spending or cut costs, ONLY use the following rule-based recommendations our system has generated based on the user's actual financial data. DO NOT make up your own recommendations for spending cuts:
+
+${ruleBasedRecommendations.join('\n\n')}
+
+You can explain these recommendations in your own words, but do not contradict them or add different recommendations.` : 
+      ''}`;
 
     // Call the OpenAI API
     const completion = await openai.chat.completions.create({
@@ -59,8 +85,8 @@ export async function POST(request: NextRequest) {
         { role: 'user', content: userMessage }
       ],
       max_tokens: 500, // Increased token limit for more detailed responses
-      temperature: 0.5, // Lower temperature for more focused and precise responses
-      // Adding function calling capability for more structured responses if needed later
+      // Using a lower temperature for spending reduction questions to stick closer to our rule-based recommendations
+      temperature: isAskingAboutSpendingReduction ? 0.3 : 0.5,
     });
 
     // Extract the response text
