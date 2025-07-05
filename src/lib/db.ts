@@ -108,4 +108,5 @@ function initializeSchema() {
 // Initialize the schema when this module is first imported
 initializeSchema();
 
+// Export the database instance
 export default db;

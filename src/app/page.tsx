@@ -11,9 +11,10 @@ import BudgetManager from '@/components/BudgetManager';
 import ExportOptions from '@/components/ExportOptions';
 import FinanceAssistant from '@/components/FinanceAssistant';
 import WhatsAppSettings from '@/components/WhatsAppSettings';
+import UserAvatar from '@/components/UserAvatar';
 import { Transaction, SavingsGoal, Budget, BudgetAlert } from '@/types';
 import { fetchSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '@/services/savingsGoalsService';
-import { FaChartPie, FaList, FaBullseye, FaLightbulb, FaWallet, FaSignOutAlt, FaBell } from 'react-icons/fa';
+import { FaChartPie, FaList, FaBullseye, FaLightbulb, FaWallet, FaBell } from 'react-icons/fa';
 import { generateSavingsRecommendations } from '@/utils/savingsAnalyzer';
 
 export default function Home() {
@@ -266,26 +267,7 @@ export default function Home() {
             <span className="text-sm font-normal ml-2">Financial Assistant</span>
           </h1>
 
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/auth/logout', {
-                  method: 'POST',
-                });
-
-                if (response.ok) {
-                  // Redirect to login page after logout
-                  router.push('/auth/login');
-                }
-              } catch (error) {
-                console.error('Error logging out:', error);
-              }
-            }}
-            className="px-4 py-2 ml-2 bg-blue-800 rounded hover:bg-blue-900 transition-colors text-sm flex items-center"
-          >
-            <FaSignOutAlt className="mr-2" />
-            Logout
-          </button>
+          <UserAvatar />
 
           <div className="flex items-center space-x-3">
             {transactions.length > 0 && (
