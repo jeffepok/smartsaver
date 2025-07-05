@@ -46,7 +46,7 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
   };
 
   // Handle user sending a message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!inputText.trim()) return;
@@ -63,183 +63,96 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
     setInputText('');
     setIsLoading(true);
 
-    // Process the user's question and generate a response
-    setTimeout(() => {
-      const botResponse = processUserQuery(inputText);
+    try {
+      // Prepare financial context for the AI
+      const financialContext = generateFinancialContext();
       
+      // Send request to our OpenAI API route
+      const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userMessage: newUserMessage.text,
+          financialContext,
+        }),
+      });
+
+      const data = await response.json();
+      
+      // Handle error responses
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get a response from the assistant');
+      }
+
+      // Add the bot's response to the chat
       const newBotMessage: Message = {
         id: generateId(),
-        text: botResponse,
+        text: data.botMessage,
         sender: 'bot',
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, newBotMessage]);
+    } catch (error) {
+      console.error('Error getting response from assistant:', error);
+      
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: generateId(),
+        text: "I'm sorry, I couldn't process your request at the moment. Please try again later.",
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 500); // Small delay to simulate processing
-  };
-
-  // Process user's query and generate a response
-  const processUserQuery = (query: string): string => {
-    query = query.toLowerCase();
-
-    // Helper function to get transactions for a specific time period
-    const getTransactionsForPeriod = (months: number = 1): Transaction[] => {
-      const today = new Date();
-      const startDate = startOfMonth(subMonths(today, months - 1));
-      const endDate = endOfMonth(today);
-
-      return transactions.filter(transaction => {
-        const transactionDate = new Date(transaction.date);
-        return isWithinInterval(transactionDate, { start: startDate, end: endDate });
-      });
-    };
-
-    // Calculate spending by category for a given period
-    const getSpendingByCategory = (transactions: Transaction[]) => {
-      return calculateCategoryTotals(transactions);
-    };
-
-    // Handle different types of queries
-    if (query.includes('spend') || query.includes('spent') || query.includes('spending')) {
-      // Questions about spending
-      
-      let period = 1; // Default to last month
-      if (query.includes('this month')) period = 1;
-      if (query.includes('last month')) period = 2;
-      if (query.includes('past 3 months') || query.includes('last 3 months')) period = 3;
-      if (query.includes('past 6 months') || query.includes('last 6 months')) period = 6;
-      if (query.includes('this year')) period = 12;
-
-      const periodTransactions = getTransactionsForPeriod(period);
-      const spendingByCategory = getSpendingByCategory(periodTransactions);
-      
-      // Spending on a specific category
-      const categories = Object.keys(spendingByCategory);
-      for (const category of categories) {
-        if (query.includes(category.toLowerCase())) {
-          const amount = spendingByCategory[category];
-          const periodText = period === 1 ? 'this month' : 
-                            period === 2 ? 'last month' : 
-                            period === 12 ? 'this year' : 
-                            `in the past ${period} months`;
-          return `You've spent €${amount.toFixed(2)} on ${category} ${periodText}.`;
-        }
-      }
-
-      // Total spending
-      if (query.includes('total')) {
-        const totalSpending = Object.entries(spendingByCategory)
-          .filter(([category]) => category !== 'Income' && category !== 'Transfer')
-          .reduce((sum, [_, amount]) => sum + amount, 0);
-        
-        const periodText = period === 1 ? 'this month' : 
-                          period === 2 ? 'last month' : 
-                          period === 12 ? 'this year' : 
-                          `in the past ${period} months`;
-        return `Your total spending ${periodText} is €${totalSpending.toFixed(2)}.`;
-      }
-
-      // Biggest expense/category
-      if (query.includes('biggest') || query.includes('largest') || query.includes('top')) {
-        const sortedCategories = Object.entries(spendingByCategory)
-          .filter(([category]) => category !== 'Income' && category !== 'Transfer')
-          .sort((a, b) => b[1] - a[1]);
-        
-        if (sortedCategories.length > 0) {
-          const [topCategory, amount] = sortedCategories[0];
-          const periodText = period === 1 ? 'this month' : 
-                            period === 2 ? 'last month' : 
-                            period === 12 ? 'this year' : 
-                            `in the past ${period} months`;
-          return `Your biggest expense category ${periodText} is ${topCategory} at €${amount.toFixed(2)}.`;
-        }
-      }
-      
-      // General spending summary if no specific question matched
-      return "I can help you analyze your spending patterns. Try asking about a specific category like 'How much did I spend on food?' or 'What's my biggest expense this month?'";
-    } else if (query.includes('budget')) {
-      // Questions about budgets
-      if (budgets.length === 0) {
-        return "You don't have any budgets set up yet. Would you like to create one?";
-      }
-      
-      // Check for category-specific budget questions
-      for (const budget of budgets) {
-        if (query.includes(budget.category.toLowerCase())) {
-          return `Your budget for ${budget.category} is €${budget.amount.toFixed(2)} ${budget.period}.`;
-        }
-      }
-
-      // List all budgets
-      if (query.includes('all') || query.includes('list')) {
-        const budgetList = budgets.map(b => `${b.category}: €${b.amount.toFixed(2)} ${b.period}`).join('\n');
-        return `Here are your current budgets:\n${budgetList}`;
-      }
-
-      return `You have ${budgets.length} budget(s) set up. You can ask me about a specific category.`;
-    } else if (query.includes('savings') || query.includes('goal')) {
-      // Questions about savings goals
-      if (savingsGoals.length === 0) {
-        return "You don't have any savings goals set up yet. Would you like to create one?";
-      }
-      
-      // Check for specific savings goal questions
-      for (const goal of savingsGoals) {
-        if (query.includes(goal.name.toLowerCase())) {
-          const progress = (goal.current_amount / goal.target_amount) * 100;
-          const remaining = goal.target_amount - goal.current_amount;
-          return `For your "${goal.name}" goal, you've saved €${goal.current_amount.toFixed(2)} out of €${goal.target_amount.toFixed(2)} (${progress.toFixed(1)}%). You need €${remaining.toFixed(2)} more to reach your goal.`;
-        }
-      }
-
-      // List all goals
-      if (query.includes('all') || query.includes('list')) {
-        const goalsList = savingsGoals.map(g => `${g.name}: €${g.current_amount.toFixed(2)} / €${g.target_amount.toFixed(2)}`).join('\n');
-        return `Here are your current savings goals:\n${goalsList}`;
-      }
-
-      return `You have ${savingsGoals.length} savings goal(s). You can ask me about a specific goal by name.`;
-    } else if (query.includes('income') || query.includes('earn')) {
-      // Questions about income
-      const incomeTransactions = transactions.filter(t => t.amount > 0);
-      
-      if (query.includes('this month') || query.includes('last month')) {
-        let period = query.includes('this month') ? 1 : 2;
-        const periodText = query.includes('this month') ? 'this month' : 'last month';
-        
-        const periodIncomeTransactions = incomeTransactions.filter(t => {
-          const transactionDate = new Date(t.date);
-          const startDate = startOfMonth(subMonths(new Date(), period - 1));
-          const endDate = period === 1 ? new Date() : endOfMonth(subMonths(new Date(), period - 1));
-          return isWithinInterval(transactionDate, { start: startDate, end: endDate });
-        });
-        
-        const totalIncome = periodIncomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-        return `Your income ${periodText} is €${totalIncome.toFixed(2)}.`;
-      }
-      
-      // Total income
-      const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-      return `Your total recorded income is €${totalIncome.toFixed(2)}.`;
-    } else if (query.includes('help') || query.includes('can you do')) {
-      // Help request
-      return `I can help you understand your finances. Here are some things you can ask me:
-      
-- How much did I spend on [category] this month?
-- What's my biggest expense category?
-- How much have I spent in the past 3 months?
-- What's my budget for [category]?
-- List all my budgets.
-- How am I doing on my [goal name] savings goal?
-- What's my income this month?
-
-Feel free to ask me anything about your spending, budgets, or savings goals!`;
     }
-
-    // Default response if no specific pattern matches
-    return "I'm not sure how to answer that question. Try asking about your spending, budgets, or savings goals. For example, 'How much did I spend on food this month?' or 'What's my biggest expense category?'";
   };
+
+  // Generate financial context for the AI
+  const generateFinancialContext = (): string => {
+    // Get recent transactions (last 3 months)
+    const today = new Date();
+    const startDate = startOfMonth(subMonths(today, 3));
+    const recentTransactions = transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return transactionDate >= startDate;
+    });
+
+    // Calculate category totals
+    const categoryTotals = calculateCategoryTotals(recentTransactions);
+    
+    // Format transaction data
+    const transactionSummary = `Recent transactions summary (past 3 months): ${recentTransactions.length} transactions.\n` +
+      `Category totals: ${Object.entries(categoryTotals)
+        .map(([category, amount]) => `${category}: €${amount.toFixed(2)}`)
+        .join(', ')}.`;
+
+    // Format budget data
+    const budgetSummary = budgets.length > 0 ?
+      `Budgets: ${budgets.map(b => `${b.category}: €${b.amount.toFixed(2)} ${b.period}`).join(', ')}.` :
+      'No budgets set.';
+
+    // Format savings goals data
+    const goalsSummary = savingsGoals.length > 0 ?
+      `Savings goals: ${savingsGoals.map(g => {
+        const progress = (g.current_amount / g.target_amount) * 100;
+        return `${g.name}: €${g.current_amount.toFixed(2)}/${g.target_amount.toFixed(2)} (${progress.toFixed(1)}%)`;
+      }).join(', ')}.` :
+      'No savings goals set.';
+
+    // Income analysis
+    const incomeTransactions = transactions.filter(t => t.amount > 0);
+    const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const incomeSummary = `Total recorded income: €${totalIncome.toFixed(2)}.`;
+    
+    return `${transactionSummary}\n${budgetSummary}\n${goalsSummary}\n${incomeSummary}`;
+  };
+
+
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
