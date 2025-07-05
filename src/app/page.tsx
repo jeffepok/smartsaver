@@ -4,15 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import CSVUploader from '@/components/CSVUploader';
 import TransactionsList from '@/components/TransactionsList';
-import ExpenseSummary from '@/components/ExpenseSummary';
-import SpendingCharts from '@/components/SpendingCharts';
+import Dashboard from '@/components/ExpenseSummary';
 import SavingsGoals from '@/components/SavingsGoals';
 import SavingsRecommendations from '@/components/SavingsRecommendations';
 import BudgetManager from '@/components/BudgetManager';
 import ExportOptions from '@/components/ExportOptions';
+import FinanceAssistant from '@/components/FinanceAssistant';
 import { Transaction, SavingsGoal, Budget, BudgetAlert } from '@/types';
 import { fetchSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '@/services/savingsGoalsService';
-import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb, FaWallet, FaSignOutAlt } from 'react-icons/fa';
+import { FaChartPie, FaList, FaBullseye, FaLightbulb, FaWallet, FaSignOutAlt } from 'react-icons/fa';
 import { generateSavingsRecommendations } from '@/utils/savingsAnalyzer';
 
 export default function Home() {
@@ -198,11 +198,11 @@ export default function Home() {
 
     switch (activeTab) {
       case 'summary':
-        return <ExpenseSummary transactions={transactions} />;
+        return <Dashboard transactions={transactions} />;
       case 'transactions':
         return <TransactionsList transactions={transactions} />;
       case 'charts':
-        return <SpendingCharts transactions={transactions} />;
+        return <Dashboard transactions={transactions} />; // Show dashboard instead since charts are integrated
       case 'goals':
         return (
           <SavingsGoals
@@ -225,7 +225,7 @@ export default function Home() {
       case 'recommendations':
         return <SavingsRecommendations transactions={transactions} />;
       default:
-        return <ExpenseSummary transactions={transactions} />;
+        return <Dashboard transactions={transactions} />;
     }
   };
 
@@ -374,6 +374,13 @@ export default function Home() {
           <p className="mt-1">A Next.js application for financial insights and savings recommendations</p>
         </div>
       </footer>
+
+      {/* Finance Assistant Chatbot */}
+      <FinanceAssistant
+        transactions={transactions}
+        budgets={budgets}
+        savingsGoals={savingsGoals}
+      />
     </div>
   );
 }
