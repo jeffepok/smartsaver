@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { categoryColors } from '@/utils/categorization';
-import { FaSearch, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 interface TransactionsListProps {
   transactions: Transaction[];
@@ -15,9 +15,21 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filteredResults, setFilteredResults] = useState<Transaction[]>([]);
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [paginatedResults, setPaginatedResults] = useState<Transaction[]>([]);
+  
   // Get unique categories from transactions
   const categories = [...new Set(transactions.map(t => t.category || 'Uncategorized'))];
   
+  // Calculate paginated results whenever filteredResults or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedResults(filteredResults.slice(startIndex, endIndex));
+  }, [filteredResults, currentPage, itemsPerPage]);
+
   // Apply filtering and searching logic whenever dependencies change
   useEffect(() => {
     // Step 1: Filter by category
@@ -53,6 +65,7 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => 
     });
     
     setFilteredResults(results);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [transactions, filter, searchQuery, sortBy, sortOrder]);
   
   // Toggle sort order
@@ -166,7 +179,7 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => 
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredResults.map((transaction, index) => (
+            {paginatedResults.map((transaction, index) => (
               <tr key={`${transaction.date}-${transaction.description}-${index}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -197,6 +210,98 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => 
       {filteredResults.length === 0 && (
         <div className="text-center py-4 text-gray-500">
           No transactions found.
+        </div>
+      )}
+      
+      {/* Pagination controls */}
+      {filteredResults.length > 0 && (
+        <div className="mt-4 flex justify-between items-center border-t pt-4">
+          <div className="text-sm text-gray-700">
+            Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, filteredResults.length)}</span> to{' '}
+            <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredResults.length)}</span> of{' '}
+            <span className="font-medium">{filteredResults.length}</span> results
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <select 
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1); // Reset to first page when changing items per page
+              }}
+              className="border-gray-300 rounded-md text-sm p-1"
+            >
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
+            
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`px-2 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 hover:bg-gray-300'}`}
+              >
+                <FaChevronLeft className="h-4 w-4" />
+              </button>
+              
+              {/* Page number indicators */}
+              <div className="flex space-x-1">
+                {Array.from({ length: Math.ceil(filteredResults.length / itemsPerPage) }, (_, i) => i + 1)
+                  .filter(page => {
+                    const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
+                    // Show current page, first, last, and pages close to current
+                    return page === 1 || 
+                           page === totalPages || 
+                           (page >= currentPage - 1 && page <= currentPage + 1);
+                  })
+                  .map(page => {
+                    const isCurrentPage = page === currentPage;
+                    const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
+                    
+                    // Add ellipsis for gaps
+                    if (page > 1 && !Array.from({ length: Math.ceil(filteredResults.length / itemsPerPage) }, (_, i) => i + 1)
+                        .filter(p => p === page - 1 || 
+                                 p === 1 || 
+                                 p === totalPages || 
+                                 (p >= currentPage - 1 && p <= currentPage + 1))
+                        .includes(page - 1)) {
+                      return (
+                        <React.Fragment key={`ellipsis-${page}`}>
+                          <span className="px-2 py-1">...</span>
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-2 py-1 rounded ${isCurrentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+                          >
+                            {page}
+                          </button>
+                        </React.Fragment>
+                      );
+                    }
+                    
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-2 py-1 rounded ${isCurrentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredResults.length / itemsPerPage)))}
+                disabled={currentPage === Math.ceil(filteredResults.length / itemsPerPage)}
+                className={`px-2 py-1 rounded ${currentPage === Math.ceil(filteredResults.length / itemsPerPage) ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 hover:bg-gray-300'}`}
+              >
+                <FaChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
