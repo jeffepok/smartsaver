@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Budget, Transaction } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
-import { checkBudgetsAndGenerateAlerts } from '@/utils/budgetUtils';
+import { checkBudgetsAndGenerateAlerts, getCurrentMonthlySpending } from '@/utils/budgetUtils';
 
 interface BudgetManagerProps {
   transactions: Transaction[];
@@ -19,6 +19,7 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, on
   const [period, setPeriod] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<string[]>([]);
+  const [categorySpending, setCategorySpending] = useState<Record<string, number>>({}); // Track current spending per category
 
   // Common categories for quick selection
   const commonCategories = [
@@ -31,11 +32,18 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, on
     'Other'
   ];
 
-  // Generate alerts when budgets or transactions change
+  // Generate alerts and calculate spending when budgets or transactions change
   useEffect(() => {
-    if (budgets.length > 0 && transactions.length > 0) {
-      const budgetAlerts = checkBudgetsAndGenerateAlerts(budgets, transactions);
-      setAlerts(budgetAlerts.map(alert => alert.message));
+    if (transactions.length > 0) {
+      // Get current spending per category
+      const spending = getCurrentMonthlySpending(transactions);
+      setCategorySpending(spending);
+      
+      // Generate alerts if we have budgets
+      if (budgets.length > 0) {
+        const budgetAlerts = checkBudgetsAndGenerateAlerts(budgets, transactions);
+        setAlerts(budgetAlerts.map(alert => alert.message));
+      }
     }
   }, [budgets, transactions]);
 
@@ -106,6 +114,27 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, on
   const deleteBudget = async (budgetId: string) => {
     // Call API to delete budget
     await onDeleteBudget(budgetId);
+  };
+  
+  // Helper function to calculate budget usage percentage
+  const getBudgetUsage = (budget: Budget): { used: number, percentage: number, remaining: number } => {
+    const spent = categorySpending[budget.category] || 0;
+    const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+    const remaining = Math.max(0, budget.amount - spent);
+    
+    return {
+      used: spent,
+      percentage: Math.min(100, percentage), // Cap at 100%
+      remaining
+    };
+  };
+  
+  // Get color based on usage percentage
+  const getColorForPercentage = (percentage: number): string => {
+    if (percentage >= 90) return 'bg-red-500'; // Over 90% - red
+    if (percentage >= 75) return 'bg-yellow-500'; // 75-90% - yellow
+    if (percentage >= 50) return 'bg-blue-500'; // 50-75% - blue
+    return 'bg-green-500'; // Under 50% - green
   };
 
   return (
@@ -219,39 +248,69 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ transactions, budgets, on
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {budgets.map((budget) => (
-                    <tr key={budget.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {budget.category}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {budget.amount.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {budget.period.charAt(0).toUpperCase() + budget.period.slice(1)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => startEditing(budget)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-4"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteBudget(budget.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {budgets.map((budget) => {
+                    const usage = getBudgetUsage(budget);
+                    const colorClass = getColorForPercentage(usage.percentage);
+                    
+                    return (
+                      <tr key={budget.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {budget.category}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {budget.amount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {budget.period.charAt(0).toUpperCase() + budget.period.slice(1)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex flex-col space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">
+                                {usage.used.toFixed(2)} / {budget.amount.toFixed(2)}
+                              </span>
+                              <span className="text-xs font-medium" style={{ 
+                                color: usage.percentage >= 90 ? 'rgb(220, 38, 38)' : 
+                                       usage.percentage >= 75 ? 'rgb(202, 138, 4)' : 'rgb(75, 85, 99)' 
+                              }}>
+                                {usage.percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div 
+                                className={`${colorClass} h-1.5 rounded-full`} 
+                                style={{ width: `${usage.percentage}%` }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {usage.remaining.toFixed(2)} remaining
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => startEditing(budget)}
+                            className="text-indigo-600 hover:text-indigo-900 mr-4"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteBudget(budget.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
