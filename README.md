@@ -62,3 +62,55 @@ Example:
 2025-06-01,Salary deposit,3500,income,1234567890,EUR
 2025-06-05,Rent payment,-1200,expense,1234567890,EUR
 ```
+
+## Chrome Extension
+
+The Chrome extension is used to notify the user when a new transaction is added to the database.
+
+### Installation
+
+add the extension to chrome
+
+1. Open chrome://extensions/
+2. Enable Developer mode
+3. Click on Load unpacked
+4. Select the extension folder
+
+## Usage
+Click on the extension icon in the chrome toolbar to open the popup.
+Fill in the form and click on the add transaction button.
+Click on send notification to send a notification.
+
+## WhatsApp Notification Integration
+
+SmartSave includes a mock WhatsApp notification system that sends alerts when new transactions are added.
+
+### Testing WhatsApp Integration
+
+1. **Register a WhatsApp Number**: Use the WhatsApp API endpoint to register your number
+   ```
+   POST /api/whatsapp
+   {
+     "phone_number": "+1234567890"
+   }
+   ```
+
+2. **Add a New Transaction**: Create a transaction through the UI or API
+   ```
+   POST /api/transactions
+   {
+     "date": "2025-07-05",
+     "description": "Test Transaction",
+     "amount": -50,
+     "category": "Testing"
+   }
+   ```
+
+3. **Check Console Logs**: The mock WhatsApp notification will appear in the server console logs
+
+4. **Verify Connection Status**: Check if a WhatsApp number is registered
+   ```
+   GET /api/whatsapp
+   ```
+
+> Note: This is a mock implementation for demonstration purposes. In a production environment, you would integrate with the actual WhatsApp Business API.

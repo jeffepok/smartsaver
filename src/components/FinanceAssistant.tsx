@@ -17,16 +17,16 @@ interface FinanceAssistantProps {
   savingsGoals: SavingsGoal[];
 }
 
-const FinanceAssistant: React.FC<FinanceAssistantProps> = ({ 
-  transactions, 
-  budgets, 
-  savingsGoals 
+const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
+  transactions,
+  budgets,
+  savingsGoals
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your SmartSave Assistant. Ask me questions about your finances, like "How much did I spend on food last month?" or "What\'s my biggest expense category?"',
+      text: 'Hello! I\'m your SmartSave Assistant. Ask me questions about your finances."',
       sender: 'bot',
       timestamp: new Date(),
     },
@@ -48,7 +48,7 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
   // Handle user sending a message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inputText.trim()) return;
 
     // Add user message to chat
@@ -66,7 +66,7 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
     try {
       // Prepare financial context for the AI
       const financialContext = generateFinancialContext();
-      
+
       // Send request to our OpenAI API route
       const response = await fetch('/api/openai', {
         method: 'POST',
@@ -80,7 +80,7 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
       });
 
       const data = await response.json();
-      
+
       // Handle error responses
       if (!response.ok) {
         throw new Error(data.error || 'Failed to get a response from the assistant');
@@ -97,7 +97,7 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
       setMessages(prev => [...prev, newBotMessage]);
     } catch (error) {
       console.error('Error getting response from assistant:', error);
-      
+
       // Add error message to chat
       const errorMessage: Message = {
         id: generateId(),
@@ -124,12 +124,12 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
 
     // Calculate category totals
     const categoryTotals = calculateCategoryTotals(recentTransactions);
-    
+
     // Sort categories by spending amount
     const sortedCategories = Object.entries(categoryTotals)
       .sort(([, a], [, b]) => b - a)
       .filter(([, amount]) => amount < 0); // Only include expense categories
-    
+
     // Get top spending categories
     const topExpenseCategories = sortedCategories
       .map(([category, amount]) => `${category}: €${Math.abs(amount).toFixed(2)}`)
@@ -145,12 +145,12 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
         return isWithinInterval(date, { start: monthStart, end: monthEnd }) && t.amount < 0;
       });
       const totalExpense = Math.abs(monthTransactions.reduce((sum, t) => sum + t.amount, 0));
-      return { 
-        month: format(month, 'MMMM'), 
+      return {
+        month: format(month, 'MMMM'),
         total: totalExpense
       };
     });
-    
+
     // Format transaction data
     const transactionSummary = `Recent transactions summary (past 3 months): ${recentTransactions.length} transactions.\n` +
       `Top expense categories: ${topExpenseCategories.join(', ')}.\n` +
@@ -170,7 +170,7 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
     const goalsSummary = savingsGoals.length > 0 ?
       `Savings goals: ${savingsGoals.map(g => {
         const progress = (g.current_amount / g.target_amount) * 100;
-        
+
         // Calculate monthly saving rate if there's a target date
         let timeInfo = '';
         if (g.target_date) {
@@ -178,10 +178,10 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
           const monthsLeft = Math.max(0, Math.floor((targetDate.getTime() - today.getTime()) / (30 * 24 * 60 * 60 * 1000)));
           const amountLeft = g.target_amount - g.current_amount;
           const monthlyNeed = monthsLeft > 0 ? amountLeft / monthsLeft : amountLeft;
-          
+
           timeInfo = ` (${monthsLeft} months left, need €${monthlyNeed.toFixed(2)}/month)`;
         }
-        
+
         return `${g.name}: €${g.current_amount.toFixed(2)}/€${g.target_amount.toFixed(2)} (${progress.toFixed(1)}%)${timeInfo}`;
       }).join('\n')}.` :
       'No savings goals set.';
@@ -190,15 +190,15 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
     const incomeTransactions = transactions.filter(t => t.amount > 0);
     const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
     const averageMonthlyIncome = totalIncome / 3; // Last 3 months
-    
+
     // Calculate total expenses
     const expenseTransactions = transactions.filter(t => t.amount < 0);
     const totalExpenses = Math.abs(expenseTransactions.reduce((sum, t) => sum + t.amount, 0));
     const averageMonthlyExpenses = totalExpenses / 3; // Last 3 months
-    
+
     // Savings rate
     const savingsRate = ((totalIncome - totalExpenses) / totalIncome) * 100;
-    
+
     const financialSummary = `Financial summary:\n` +
       `- Total income (3 months): €${totalIncome.toFixed(2)} (avg €${averageMonthlyIncome.toFixed(2)}/month)\n` +
       `- Total expenses (3 months): €${totalExpenses.toFixed(2)} (avg €${averageMonthlyExpenses.toFixed(2)}/month)\n` +
@@ -208,7 +208,7 @@ const FinanceAssistant: React.FC<FinanceAssistantProps> = ({
         const percentUsed = (categorySpending / b.amount) * 100;
         return `${b.category}: ${percentUsed.toFixed(0)}%`;
       }).join(', ')}`;
-    
+
     return `${financialSummary}\n\n${transactionSummary}\n\n${budgetSummary}\n\n${goalsSummary}`;
   };
 

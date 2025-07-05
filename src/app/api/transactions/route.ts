@@ -3,6 +3,16 @@ import { cookies } from 'next/headers';
 import db from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { Transaction } from '@/types';
+import { sendWhatsAppMessage, formatTransactionMessage } from '@/utils/whatsappUtils';
+
+// Define the user type for database query results
+type UserRecord = {
+  id?: number;
+  email?: string;
+  name?: string;
+  whatsapp_number?: string;
+  created_at?: string;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -92,6 +102,21 @@ export async function POST(request: NextRequest) {
       newTransaction.category,
       newTransaction.csv_file_id
     );
+    
+    // Send WhatsApp notification if user has a whatsapp_number
+    try {
+      const userStmt = db.prepare('SELECT whatsapp_number FROM users WHERE id = ?');
+      const user = userStmt.get(userId) as UserRecord;
+      
+      if (user?.whatsapp_number) {
+        const notificationMessage = formatTransactionMessage(newTransaction);
+        await sendWhatsAppMessage(user.whatsapp_number, notificationMessage);
+        console.log('WhatsApp notification sent for new transaction');
+      }
+    } catch (notifyError) {
+      console.error('Error sending WhatsApp notification:', notifyError);
+      // Continue with the response even if notification fails
+    }
     
     return NextResponse.json({
       success: true,
