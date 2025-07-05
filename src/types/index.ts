@@ -42,3 +42,24 @@ export interface SavingsRecommendation {
   potentialSavings: number;
   description: string;
 }
+
+// Budget type
+export interface Budget {
+  id: string;
+  category: string;
+  amount: number;
+  period: 'monthly' | 'weekly' | 'yearly';
+  createdAt: string;
+  lastUpdated: string;
+}
+
+// Budget alert type
+export interface BudgetAlert {
+  budgetId: string;
+  category: string;
+  threshold: number; // percentage threshold (e.g., 80 for 80%)
+  currentSpending: number;
+  budgetAmount: number;
+  percentageUsed: number;
+  message: string;
+}

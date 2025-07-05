@@ -2,14 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import CSVUploader from '@/components/CSVUploader';
-import ExpenseSummary from '@/components/ExpenseSummary';
 import TransactionsList from '@/components/TransactionsList';
+import ExpenseSummary from '@/components/ExpenseSummary';
 import SpendingCharts from '@/components/SpendingCharts';
 import SavingsGoals from '@/components/SavingsGoals';
 import SavingsRecommendations from '@/components/SavingsRecommendations';
-import { Transaction, SavingsGoal } from '@/types';
-import { saveTransactions, loadTransactions, saveSavingsGoals, loadSavingsGoals, clearStoredData } from '@/utils/storage';
-import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb } from 'react-icons/fa';
+import BudgetManager from '@/components/BudgetManager';
+import { Transaction, SavingsGoal, Budget } from '@/types';
+import { categorizeTransaction } from '@/utils/categorization';
+
+import { saveTransactions, loadTransactions, saveSavingsGoals, loadSavingsGoals, saveBudgets, loadBudgets, clearStoredData } from '@/utils/storage';
+import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb, FaWallet } from 'react-icons/fa';
 import ExportOptions from '@/components/ExportOptions';
 import { generateSavingsRecommendations } from '@/utils/savingsAnalyzer';
 
@@ -17,10 +20,20 @@ export default function Home() {
   // State for transactions data
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
+  // State for savings goals
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  
+  // State for budgets
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  
+  // State for active tab
+  const [activeTab, setActiveTab] = useState<string>('summary');
+  
   // Load stored data on component mount
   useEffect(() => {
     const storedTransactions = loadTransactions();
     const storedGoals = loadSavingsGoals();
+    const storedBudgets = loadBudgets();
     
     if (storedTransactions.length > 0) {
       setTransactions(storedTransactions);
@@ -29,13 +42,11 @@ export default function Home() {
     if (storedGoals.length > 0) {
       setSavingsGoals(storedGoals);
     }
+    
+    if (storedBudgets.length > 0) {
+      setBudgets(storedBudgets);
+    }
   }, []);
-  
-  // State for savings goals
-  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
-  
-  // State for active tab
-  const [activeTab, setActiveTab] = useState<string>('summary');
   
   // Handle data loaded from CSV
   const handleDataLoaded = (data: Transaction[]) => {
@@ -88,6 +99,14 @@ export default function Home() {
             onDeleteGoal={handleDeleteGoal}
           />
         );
+      case 'budget':
+        return (
+          <BudgetManager 
+            transactions={transactions}
+            budgets={budgets}
+            onBudgetChange={setBudgets}
+          />
+        );
       case 'recommendations':
         return <SavingsRecommendations transactions={transactions} />;
       default:
@@ -117,6 +136,8 @@ export default function Home() {
                 <button
                   onClick={() => {
                     setTransactions([]);
+                    setSavingsGoals([]);
+                    setBudgets([]);
                     clearStoredData();
                   }}
                   className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-800 transition-colors text-sm"
@@ -179,6 +200,18 @@ export default function Home() {
               >
                 <FaBullseye className="mr-2" />
                 Savings Goals
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('budget')}
+                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'budget'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FaWallet className="mr-2" />
+                Budget Manager
               </button>
               
               <button

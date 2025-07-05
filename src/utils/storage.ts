@@ -1,7 +1,10 @@
-import { Transaction, SavingsGoal } from '@/types';
+import { Transaction, SavingsGoal, Budget, BudgetAlert } from '@/types';
 
-const TRANSACTIONS_STORAGE_KEY = 'smartsave-transactions';
-const SAVINGS_GOALS_STORAGE_KEY = 'smartsave-savings-goals';
+// Storage keys
+const TRANSACTIONS_STORAGE_KEY = 'smartsave_transactions';
+const SAVINGS_GOALS_STORAGE_KEY = 'smartsave_savings_goals';
+const BUDGETS_KEY = 'smartsave_budgets';
+const BUDGET_ALERTS_KEY = 'smartsave_budget_alerts';
 
 // Save transactions to localStorage
 export const saveTransactions = (transactions: Transaction[]): void => {
@@ -47,12 +50,46 @@ export const loadSavingsGoals = (): SavingsGoal[] => {
   return [];
 };
 
+// Budgets storage functions
+export const saveBudgets = (budgets: Budget[]): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(BUDGETS_KEY, JSON.stringify(budgets));
+  }
+};
+
+export const loadBudgets = (): Budget[] => {
+  if (typeof window !== 'undefined') {
+    const storedBudgets = localStorage.getItem(BUDGETS_KEY);
+    return storedBudgets ? JSON.parse(storedBudgets) : [];
+  }
+  return [];
+};
+
+// Budget alerts storage functions
+export const saveBudgetAlerts = (alerts: BudgetAlert[]): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(BUDGET_ALERTS_KEY, JSON.stringify(alerts));
+  }
+};
+
+export const loadBudgetAlerts = (): BudgetAlert[] => {
+  if (typeof window !== 'undefined') {
+    const storedAlerts = localStorage.getItem(BUDGET_ALERTS_KEY);
+    return storedAlerts ? JSON.parse(storedAlerts) : [];
+  }
+  return [];
+};
+
 // Clear all stored data
 export const clearStoredData = (): void => {
-  try {
-    localStorage.removeItem(TRANSACTIONS_STORAGE_KEY);
-    localStorage.removeItem(SAVINGS_GOALS_STORAGE_KEY);
-  } catch (error) {
-    console.error('Error clearing stored data from localStorage:', error);
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(TRANSACTIONS_STORAGE_KEY);
+      localStorage.removeItem(SAVINGS_GOALS_STORAGE_KEY);
+      localStorage.removeItem(BUDGETS_KEY);
+      localStorage.removeItem(BUDGET_ALERTS_KEY);
+    } catch (error) {
+      console.error('Error clearing stored data from localStorage:', error);
+    }
   }
 };
