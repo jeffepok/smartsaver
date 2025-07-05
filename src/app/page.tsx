@@ -10,9 +10,10 @@ import SavingsRecommendations from '@/components/SavingsRecommendations';
 import BudgetManager from '@/components/BudgetManager';
 import ExportOptions from '@/components/ExportOptions';
 import FinanceAssistant from '@/components/FinanceAssistant';
+import WhatsAppSettings from '@/components/WhatsAppSettings';
 import { Transaction, SavingsGoal, Budget, BudgetAlert } from '@/types';
 import { fetchSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '@/services/savingsGoalsService';
-import { FaChartPie, FaList, FaBullseye, FaLightbulb, FaWallet, FaSignOutAlt } from 'react-icons/fa';
+import { FaChartPie, FaList, FaBullseye, FaLightbulb, FaWallet, FaSignOutAlt, FaBell } from 'react-icons/fa';
 import { generateSavingsRecommendations } from '@/utils/savingsAnalyzer';
 
 export default function Home() {
@@ -243,6 +244,13 @@ export default function Home() {
         );
       case 'recommendations':
         return <SavingsRecommendations transactions={transactions} />;
+      case 'notifications':
+        return (
+          <div className="max-w-4xl mx-auto w-full">
+            <h2 className="text-2xl font-bold mb-4">Notification Settings</h2>
+            <WhatsAppSettings />
+          </div>
+        );
       default:
         return <Dashboard transactions={transactions} />;
     }
@@ -378,6 +386,18 @@ export default function Home() {
               >
                 <FaLightbulb className="mr-2" />
                 Smart Recommendations
+              </button>
+
+              <button
+                onClick={() => setActiveTab('notifications')}
+                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'notifications'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FaBell className="mr-2" />
+                Notification Settings
               </button>
             </div>
           </nav>
