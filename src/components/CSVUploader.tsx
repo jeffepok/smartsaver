@@ -44,8 +44,9 @@ const CSVUploader: React.FC<CSVUploaderProps> = ({ onDataLoaded }) => {
               throw new Error(errorData.error || 'Failed to upload CSV');
             }
             
-            // Still call the onDataLoaded callback for local state updates
-            onDataLoaded(parsedData);
+            // Trigger a refresh of the transactions data from the API
+            // This will reload data from the database instead of using the local CSV data
+            onDataLoaded([]);
           } catch (err) {
             setError(err instanceof Error ? err.message : 'Error processing CSV data. Please check the file format.');
           } finally {

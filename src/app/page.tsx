@@ -87,9 +87,23 @@ export default function Home() {
   }, []);
 
   // Handle data loaded from CSV
-  const handleDataLoaded = (data: Transaction[]) => {
-    setTransactions(data);
-    // No need to save here, the CSVUploader component now handles API saving
+  const handleDataLoaded = async () => {
+    try {
+      // Fetch fresh transaction data from the API
+      const response = await fetch('/api/transactions');
+      
+      if (!response.ok) {
+        if (response.status === 401) return;
+        throw new Error('Failed to fetch transactions');
+      }
+
+      const data = await response.json();
+      if (data.transactions && data.transactions.length > 0) {
+        setTransactions(data.transactions);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions after CSV upload:', error);
+    }
   };
 
   // Handle adding a new savings goal
