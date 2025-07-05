@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { categoryColors } from '@/utils/categorization';
-import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaChevronLeft, FaChevronRight, FaPlus } from 'react-icons/fa';
+import { FaSearch, FaSortAmountDown, FaSortAmountUp, FaChevronLeft, FaChevronRight, FaPlus, FaTimes } from 'react-icons/fa';
 import AddTransactionForm from './AddTransactionForm';
 
 interface TransactionsListProps {
@@ -94,20 +94,34 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions, onRef
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Transactions</h2>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => setShowAddForm(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
         >
           <FaPlus className="mr-2" />
-          {showAddForm ? 'Cancel' : 'Add Transaction'}
+          Add Transaction
         </button>
       </div>
       
+      {/* Modal Overlay */}
       {showAddForm && (
-        <div className="mb-6">
-          <AddTransactionForm 
-            onTransactionAdded={handleTransactionAdded}
-            onCancel={() => setShowAddForm(false)}
-          />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          {/* Modal Content */}
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="absolute right-4 top-4 text-gray-500 hover:text-gray-800"
+              aria-label="Close modal"
+            >
+              <FaTimes size={24} />
+            </button>
+            
+            <div className="p-6">
+              <AddTransactionForm 
+                onTransactionAdded={handleTransactionAdded}
+                onCancel={() => setShowAddForm(false)}
+              />
+            </div>
+          </div>
         </div>
       )}
       

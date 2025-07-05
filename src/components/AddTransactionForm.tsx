@@ -121,7 +121,7 @@ const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ onTransactionAd
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white p-6">
       <h2 className="text-xl font-semibold mb-4">Add New Transaction</h2>
 
       {error && (
