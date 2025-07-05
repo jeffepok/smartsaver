@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SmartSave - Digital Financial Assistant
+
+SmartSave is a Next.js application that provides tailored savings insights using financial data and smart logic. It helps users understand their spending patterns, set savings goals, and receive recommendations for improving their financial health.
+
+## Features
+
+### Financial Data Analysis
+- **Expense Overview**: Clear view of the past three months of expenses
+- **Spend Categorization**: Automatically categorizes spending into buckets (food, rent, transport, subscriptions, etc.)
+- **Interactive Visualizations**: Charts and graphs to visualize spending trends over time
+
+### Smart Savings Tools
+- **Savings Goals**: Set and track progress toward multiple savings goals
+- **Automatic Saving Recommendations**: Personalized suggestions based on spending patterns
+- **Expense Reduction Tips**: Smart recommendations for areas to cut back on spending
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18.0.0 or later
+- npm or yarn package manager
 
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/your-username/smartsave.git
+cd smartsave
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Start the development server:
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) (or the port shown in your terminal) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data Format
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application expects financial data in CSV format with the following columns:
 
-## Learn More
+```
+date,description,amount,type,account_number,currency
+```
 
-To learn more about Next.js, take a look at the following resources:
+Example:
+```
+2025-06-01,Salary deposit,3500,income,1234567890,EUR
+2025-06-05,Rent payment,-1200,expense,1234567890,EUR
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Technologies Used
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Next.js**: React framework for the frontend application
+- **TypeScript**: For type-safe code
+- **Chart.js & react-chartjs-2**: For data visualization
+- **TailwindCSS**: For styling
+- **PapaParse**: For CSV parsing
+- **React Icons**: For UI icons
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/src/components`: React components for the UI
+- `/src/types`: TypeScript type definitions
+- `/src/utils`: Utility functions for data processing
+  - `csvParser.ts`: Functions for parsing and processing CSV data
+  - `categorization.ts`: Logic for categorizing transactions
+  - `savingsAnalyzer.ts`: Smart analysis for savings recommendations

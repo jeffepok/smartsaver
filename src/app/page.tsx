@@ -1,102 +1,173 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState } from 'react';
+import CSVUploader from '@/components/CSVUploader';
+import ExpenseSummary from '@/components/ExpenseSummary';
+import TransactionsList from '@/components/TransactionsList';
+import SpendingCharts from '@/components/SpendingCharts';
+import SavingsGoals from '@/components/SavingsGoals';
+import SavingsRecommendations from '@/components/SavingsRecommendations';
+import { Transaction, SavingsGoal } from '@/types';
+import { FaChartPie, FaList, FaChartLine, FaBullseye, FaLightbulb } from 'react-icons/fa';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  // State for transactions data
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  
+  // State for savings goals
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  
+  // State for active tab
+  const [activeTab, setActiveTab] = useState<string>('summary');
+  
+  // Handle data loaded from CSV
+  const handleDataLoaded = (data: Transaction[]) => {
+    setTransactions(data);
+  };
+  
+  // Handle adding a new savings goal
+  const handleAddGoal = (goal: SavingsGoal) => {
+    setSavingsGoals([...savingsGoals, goal]);
+  };
+  
+  // Handle updating a savings goal
+  const handleUpdateGoal = (updatedGoal: SavingsGoal) => {
+    setSavingsGoals(
+      savingsGoals.map((goal) => (goal.id === updatedGoal.id ? updatedGoal : goal))
+    );
+  };
+  
+  // Handle deleting a savings goal
+  const handleDeleteGoal = (goalId: string) => {
+    setSavingsGoals(savingsGoals.filter((goal) => goal.id !== goalId));
+  };
+  
+  // Render tab content based on active tab
+  const renderTabContent = () => {
+    if (transactions.length === 0) {
+      return <CSVUploader onDataLoaded={handleDataLoaded} />;
+    }
+    
+    switch (activeTab) {
+      case 'summary':
+        return <ExpenseSummary transactions={transactions} />;
+      case 'transactions':
+        return <TransactionsList transactions={transactions} />;
+      case 'charts':
+        return <SpendingCharts transactions={transactions} />;
+      case 'goals':
+        return (
+          <SavingsGoals
+            goals={savingsGoals}
+            onAddGoal={handleAddGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onDeleteGoal={handleDeleteGoal}
+          />
+        );
+      case 'recommendations':
+        return <SavingsRecommendations transactions={transactions} />;
+      default:
+        return <ExpenseSummary transactions={transactions} />;
+    }
+  };
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-blue-700 text-white p-4 shadow-md">
+        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
+          <h1 className="text-2xl font-bold mb-2 md:mb-0">
+            SmartSave
+            <span className="text-sm font-normal ml-2">Financial Assistant</span>
+          </h1>
+          
+          {transactions.length > 0 && (
+            <button
+              onClick={() => setTransactions([])}
+              className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-800 transition-colors text-sm"
+            >
+              Reset & Upload New Data
+            </button>
+          )}
         </div>
+      </header>
+
+      <main className="container mx-auto py-6 px-4">
+        {transactions.length > 0 && (
+          <nav className="mb-6 overflow-x-auto">
+            <div className="flex space-x-2 border-b border-gray-200 min-w-max">
+              <button
+                onClick={() => setActiveTab('summary')}
+                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'summary'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FaChartPie className="mr-2" />
+                Expense Summary
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'transactions'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FaList className="mr-2" />
+                Transactions
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('charts')}
+                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'charts'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FaChartLine className="mr-2" />
+                Spending Charts
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('goals')}
+                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'goals'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FaBullseye className="mr-2" />
+                Savings Goals
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('recommendations')}
+                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'recommendations'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FaLightbulb className="mr-2" />
+                Smart Recommendations
+              </button>
+            </div>
+          </nav>
+        )}
+
+        {renderTabContent()}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      
+      {/* Footer */}
+      <footer className="bg-gray-800 text-gray-300 py-4 mt-12">
+        <div className="container mx-auto px-4 text-center text-sm">
+          <p>&copy; {new Date().getFullYear()} SmartSave Financial Assistant</p>
+          <p className="mt-1">A Next.js application for financial insights and savings recommendations</p>
+        </div>
       </footer>
     </div>
   );
