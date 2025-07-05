@@ -23,8 +23,8 @@ SmartSave is a Next.js application that provides tailored savings insights using
 ### Installation
 
 1. Clone the repository:
+extract the zip file
 ```bash
-git clone https://github.com/your-username/smartsave.git
 cd smartsave
 ```
 
@@ -35,14 +35,19 @@ npm install
 yarn install
 ```
 
-3. Start the development server:
+3. Create Env file `.env.local` with OPENAI_API_KEY:
+```bash
+OPENAI_API_KEY=your-open-ai-key
+```
+
+4. Start the development server:
 ```bash
 npm run dev
 # or
 yarn dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) (or the port shown in your terminal) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) (or the port shown in your terminal) in your browser
 
 ## Data Format
 
@@ -57,21 +62,3 @@ Example:
 2025-06-01,Salary deposit,3500,income,1234567890,EUR
 2025-06-05,Rent payment,-1200,expense,1234567890,EUR
 ```
-
-## Technologies Used
-
-- **Next.js**: React framework for the frontend application
-- **TypeScript**: For type-safe code
-- **Chart.js & react-chartjs-2**: For data visualization
-- **TailwindCSS**: For styling
-- **PapaParse**: For CSV parsing
-- **React Icons**: For UI icons
-
-## Project Structure
-
-- `/src/components`: React components for the UI
-- `/src/types`: TypeScript type definitions
-- `/src/utils`: Utility functions for data processing
-  - `csvParser.ts`: Functions for parsing and processing CSV data
-  - `categorization.ts`: Logic for categorizing transactions
-  - `savingsAnalyzer.ts`: Smart analysis for savings recommendations
