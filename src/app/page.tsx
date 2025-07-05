@@ -326,18 +326,6 @@ export default function Home() {
               </button>
 
               <button
-                onClick={() => setActiveTab('charts')}
-                className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
-                  activeTab === 'charts'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <FaChartLine className="mr-2" />
-                Spending Charts
-              </button>
-
-              <button
                 onClick={() => setActiveTab('goals')}
                 className={`flex items-center px-4 py-3 font-medium text-sm whitespace-nowrap ${
                   activeTab === 'goals'

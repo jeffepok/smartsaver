@@ -3,12 +3,38 @@ import { Transaction } from '@/types';
 import { getLastThreeMonthsTransactions, groupTransactionsByMonth, calculateMonthlySpending } from '@/utils/csvParser';
 import { format, parseISO } from 'date-fns';
 import { calculateCategoryTotals, categoryColors } from '@/utils/categorization';
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  BarElement, 
+  ArcElement, 
+  Title, 
+  Tooltip, 
+  Legend 
+} from 'chart.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
 
-interface ExpenseSummaryProps {
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface DashboardProps {
   transactions: Transaction[];
 }
 
-const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ transactions }) => {
+const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
   // Get transactions from the last three months
   const recentTransactions = getLastThreeMonthsTransactions(transactions);
   
@@ -29,9 +55,70 @@ const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ transactions }) => {
   // Calculate total spending
   const totalSpending = sortedCategories.reduce((total, [_, amount]) => total + amount, 0);
 
+  // Prepare data for category distribution chart (doughnut)
+  const categoryChartData = {
+    labels: Object.keys(categoryTotals).filter(
+      category => category !== 'Income' && category !== 'Transfer'
+    ),
+    datasets: [
+      {
+        data: Object.entries(categoryTotals)
+          .filter(([category]) => category !== 'Income' && category !== 'Transfer')
+          .map(([_, amount]) => amount),
+        backgroundColor: Object.entries(categoryTotals)
+          .filter(([category]) => category !== 'Income' && category !== 'Transfer')
+          .map(([category]) => categoryColors[category] || categoryColors.Other),
+        borderWidth: 1,
+      },
+    ],
+  };
+  
+  // Prepare data for monthly spending trend chart (line)
+  const monthlySpendingChartData = {
+    labels: Object.keys(monthlyTotals),
+    datasets: [
+      {
+        label: 'Monthly Spending',
+        data: Object.values(monthlyTotals),
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.3,
+      },
+    ],
+  };
+
+  // Prepare data for category comparison by month (bar)
+  const months = Object.keys(groupedByMonth);
+  const mainCategories = Object.entries(categoryTotals)
+    .filter(([category, amount]) => 
+      category !== 'Income' && 
+      category !== 'Transfer' && 
+      amount > 0
+    )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5) // Take top 5 categories
+    .map(([category]) => category);
+  
+  const categoryByMonthData = {
+    labels: months,
+    datasets: mainCategories.map((category) => {
+      const color = categoryColors[category] || categoryColors.Other;
+      return {
+        label: category,
+        data: months.map(month => {
+          const monthTransactions = groupedByMonth[month] || [];
+          return monthTransactions
+            .filter(t => t.category === category && t.amount < 0)
+            .reduce((total, t) => total + Math.abs(t.amount), 0);
+        }),
+        backgroundColor: color,
+      };
+    }),
+  };
+
   return (
     <div className="w-full p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-6">Last 3 Months Expense Summary</h2>
+      <h2 className="text-xl font-semibold mb-6">Dashboard</h2>
       
       {/* Monthly spending overview */}
       <div className="mb-8">
@@ -84,8 +171,122 @@ const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ transactions }) => {
           })}
         </div>
       </div>
+
+      {/* Charts Section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-6">Spending Analysis</h2>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Monthly Spending Trend */}
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="text-lg font-medium mb-4">Monthly Spending Trend</h3>
+            <div className="h-64">
+              <Line 
+                data={monthlySpendingChartData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'top',
+                    },
+                    title: {
+                      display: false,
+                    },
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function(value) {
+                          return '€' + value;
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Category Distribution */}
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="text-lg font-medium mb-4">Spending by Category</h3>
+            <div className="h-64 flex justify-center">
+              <div style={{ maxWidth: '300px' }}>
+                <Doughnut 
+                  data={categoryChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: {
+                          boxWidth: 12
+                        }
+                      }
+                    },
+                    cutout: '65%'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Category Comparison by Month */}
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium mb-4">Top Categories by Month</h3>
+          <div className="h-80">
+            <Bar 
+              data={categoryByMonthData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'top',
+                  },
+                  title: {
+                    display: false,
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                          label += ': ';
+                        }
+                        if (context.parsed.y !== null) {
+                          label += '€' + context.parsed.y.toFixed(2);
+                        }
+                        return label;
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    stacked: false,
+                  },
+                  y: {
+                    stacked: false,
+                    beginAtZero: true,
+                    ticks: {
+                      callback: function(value) {
+                        return '€' + value;
+                      }
+                    }
+                  }
+                }
+              }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default ExpenseSummary;
+export default Dashboard;
